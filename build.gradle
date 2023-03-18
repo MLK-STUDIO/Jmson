@@ -3,3 +3,13 @@ plugins {
     id 'maven-publish'
 }
 group 'net.mlk.jmson'
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = 'net.mlk.jmson'
+            artifactId = 'Jmson'
+            version = '1.0'
+        }
+    }
+}
