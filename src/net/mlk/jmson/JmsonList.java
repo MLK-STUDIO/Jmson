@@ -73,7 +73,7 @@ public class JmsonList extends JmsonObject {
         return JmsonDict.translate_unicode((String) this.get(index));
     }
 
-    public JmsonDict getJson(int index) {
+    public JmsonDict getDictionary(int index) {
         return (JmsonDict) this.get(index);
     }
 

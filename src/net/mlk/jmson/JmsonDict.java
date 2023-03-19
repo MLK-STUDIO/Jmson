@@ -20,6 +20,23 @@ public class JmsonDict extends JmsonObject {
         super(raw_json, parse_types);
     }
 
+    @Override
+    protected void add_block(String block) {
+        String[] values = block.split(":", 2);
+        String key = fix_element(values[0]);
+        String value = fix_element(values[1]);
+
+        if (value.startsWith("{") && value.endsWith("}")) {
+            this.dict.put(key, new JmsonDict(value, this.parse_types));
+        }
+        else if (value.startsWith("[") && value.endsWith("]")) {
+            this.dict.put(key, new JmsonList(value, this.parse_types));
+        }
+        else {
+            this.dict.put(key, value);
+        }
+    }
+
     public JmsonDict remove(Object key) {
         this.dict.remove(key);
         return this;
@@ -44,6 +61,10 @@ public class JmsonDict extends JmsonObject {
 
     public Object get(Object key) {
         return this.dict.get(key);
+    }
+
+    public JmsonDict getDictionary(Object key) {
+        return (JmsonDict) this.get(key);
     }
 
     public JmsonList getList(Object key) {

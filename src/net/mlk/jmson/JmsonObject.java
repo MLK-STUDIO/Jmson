@@ -43,25 +43,7 @@ public class JmsonObject {
         }
     }
 
-    protected void add_block(String block) {
-        String[] values = block.split(":", 2);
-        String key = fix_element(values[0]);
-        String value = fix_element(values[1]);
-
-        if (value.startsWith("{") && value.endsWith("}")) {
-            this.dict.put(key, new JmsonDict(value, this.parse_types));
-        }
-        else if (value.startsWith("[") && value.endsWith("]")) {
-            this.dict.put(key, new JmsonList(value, this.parse_types));
-        }
-        else {
-            this.dict.put(key, value);
-        }
-    }
-
-    public JmsonDict getJson(Object key) {
-        return (JmsonDict) this.dict.get(key);
-    }
+    protected void add_block(String block) {}
 
     protected static String fix_element(String element) {
         element = element.trim();
