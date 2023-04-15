@@ -1,8 +1,10 @@
 package net.mlk.jmson;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 public class JmsonDict extends JmsonObject {
+    private final HashMap<Object, Object> dict = new LinkedHashMap<>();
 
     public JmsonDict() {
         super(true);

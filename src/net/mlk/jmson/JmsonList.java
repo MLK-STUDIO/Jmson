@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class JmsonList extends JmsonObject {
+    private final List<Object> list = new ArrayList<>();
 
     public JmsonList() {
         super(true);

@@ -1,10 +1,7 @@
 package net.mlk.jmson;
-import java.util.*;
 import java.util.regex.Pattern;
 
-public class JmsonObject {
-    protected final HashMap<Object, Object> dict = new LinkedHashMap<>();
-    protected final List<Object> list = new ArrayList<>();
+public abstract class JmsonObject {
     protected boolean parse_types = true;
 
     protected JmsonObject(boolean parse_types) {
