@@ -170,6 +170,9 @@ public class JsonList {
 
     public static JsonList parseFromString(String rawList, boolean parseTypes) {
         JsonList list = new JsonList(parseTypes);
+        if (rawList == null) {
+            return list;
+        }
         StringBuilder builder = new StringBuilder();
         String toParse = rawList.substring(1, rawList.length() - 1);
         boolean quote = false;

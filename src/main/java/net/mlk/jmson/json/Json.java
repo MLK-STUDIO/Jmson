@@ -168,6 +168,9 @@ public class Json {
 
     public static Json parseFromString(String rawJson, boolean parseTypes) {
         Json json = new Json(parseTypes);
+        if (rawJson == null) {
+            return json;
+        }
         StringBuilder builder = new StringBuilder();
         String toParse = rawJson.substring(1, rawJson.length() - 1);
         boolean quote = false;
