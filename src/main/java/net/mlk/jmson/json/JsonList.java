@@ -3,7 +3,6 @@ package net.mlk.jmson.json;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.regex.Pattern;
 
 public class JsonList {
     private final java.util.List<Object> list = new ArrayList<>();
@@ -158,6 +157,11 @@ public class JsonList {
 
     public boolean containsAll(Collection<?> list) {
         return new HashSet<>(this.list).containsAll(list);
+    }
+
+    public JsonList setParseTypes(boolean parseTypes) {
+        this.parseTypes = parseTypes;
+        return this;
     }
 
     public static JsonList parseFromString(String rawList) {

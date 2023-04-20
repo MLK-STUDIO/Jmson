@@ -161,6 +161,11 @@ public class Json {
         return parseFromString(rawJson, true);
     }
 
+    public Json setParseTypes(boolean parseTypes) {
+        this.parseTypes = parseTypes;
+        return this;
+    }
+
     public static Json parseFromString(String rawJson, boolean parseTypes) {
         Json json = new Json(parseTypes);
         StringBuilder builder = new StringBuilder();
