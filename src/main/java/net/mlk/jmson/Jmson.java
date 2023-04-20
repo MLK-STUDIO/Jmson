@@ -2,9 +2,7 @@ package net.mlk.jmson;
 
 import net.mlk.jmson.json.JmsonObject;
 import net.mlk.jmson.json.Json;
-
 import java.lang.reflect.Field;
-import java.util.regex.Pattern;
 
 public class Jmson {
     private Json json;
@@ -14,7 +12,7 @@ public class Jmson {
      * @param rawJson json string
      */
     public Jmson(String rawJson) {
-        this.json = parse(rawJson);
+        this.json = parseJson(rawJson);
     }
 
     /**
@@ -23,7 +21,7 @@ public class Jmson {
      * @param parseTypes specify type parsing
      */
     public Jmson(String rawJson, boolean parseTypes) {
-        this.json = parse(rawJson, parseTypes);
+        this.json = parseJson(rawJson, parseTypes);
     }
 
     /**
@@ -32,7 +30,7 @@ public class Jmson {
      * @param object object with fields
      */
     public Jmson(String rawJson, JmsonObject object) {
-        parse(rawJson, object);
+        parseJson(rawJson, object);
     }
 
     /**
@@ -40,8 +38,8 @@ public class Jmson {
      * @param rawJson json string
      * @return Json object
      */
-    public static Json parse(String rawJson) {
-        return parse(rawJson, true);
+    public static Json parseJson(String rawJson) {
+        return parseJson(rawJson, true);
     }
 
     /**
@@ -50,7 +48,7 @@ public class Jmson {
      * @param parseTypes specify type parsing
      * @return Json object
      */
-    public static Json parse(String rawJson, boolean parseTypes) {
+    public static Json parseJson(String rawJson, boolean parseTypes) {
         return Json.parseFromString(rawJson, parseTypes);
     }
 
@@ -59,9 +57,9 @@ public class Jmson {
      * @param rawJson json string
      * @param object object with fields
      */
-    public static void parse(String rawJson, JmsonObject object) {
+    public static void parseJson(String rawJson, JmsonObject object) {
         Field[] fields = object.getClass().getFields();
-        Json js = parse(rawJson);
+        Json js = parseJson(rawJson);
 
         for (Field field : fields) {
             try {
@@ -75,6 +73,30 @@ public class Jmson {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    /**
+     * Parser method which parse json from specified object (Test function)
+     * @param object object with fields
+     * @param ignoreNull if you want to ignore null fields
+     */
+    public static Json parseJsonFromObject(JmsonObject object, boolean ignoreNull) {
+        Field[] fields = object.getClass().getFields();
+        Json json = new Json();
+
+        for (Field field : fields) {
+            try {
+                String name = field.getName();
+                Object value = field.get(object);
+                if (value == null) {
+                    continue;
+                }
+                json.put(name, value);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return json;
     }
 
     /**
