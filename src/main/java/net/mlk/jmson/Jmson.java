@@ -88,7 +88,7 @@ public class Jmson {
             try {
                 String name = field.getName();
                 Object value = field.get(object);
-                if (value == null) {
+                if (ignoreNull && value == null) {
                     continue;
                 }
                 json.put(name, value);
