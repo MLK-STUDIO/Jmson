@@ -57,32 +57,50 @@ public class Jmson {
      * @param rawJson json string
      * @param object object with fields
      */
-    public static void parseJson(String rawJson, JmsonObject object) {
+    public static <T extends JmsonObject> T parseJson(String rawJson, T object) {
         Field[] fields = object.getClass().getFields();
         Json js = parseJson(rawJson);
 
         for (Field field : fields) {
             try {
                 String name = field.getName();
-                Class<?> type = field.getType();
                 if (js.containsKey(name)) {
                     field.setAccessible(true);
-                    field.set(object, js.getByType(name, type));
+                    field.set(object, js.get(name));
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
+        return object;
+    }
+
+    /**
+     * Parser method which parse json from specified object (Test function)
+     * @param object object with fields
+     */
+    public static Json parseJsonFromObject(JmsonObject object) {
+        return parseJsonFromObject(object, true);
+    }
+
+    /**
+     * Parser method which parse json from specified object (Test function)
+     * @param object object with fields
+     * @param parseTypes specify type parsing
+     */
+    public static Json parseJsonFromObject(JmsonObject object, boolean parseTypes) {
+        return parseJsonFromObject(object, false, parseTypes);
     }
 
     /**
      * Parser method which parse json from specified object (Test function)
      * @param object object with fields
      * @param ignoreNull if you want to ignore null fields
+     * @param parseTypes specify type parsing
      */
-    public static Json parseJsonFromObject(JmsonObject object, boolean ignoreNull) {
+    public static Json parseJsonFromObject(JmsonObject object, boolean ignoreNull, boolean parseTypes) {
         Field[] fields = object.getClass().getFields();
-        Json json = new Json();
+        Json json = new Json(parseTypes);
 
         for (Field field : fields) {
             try {

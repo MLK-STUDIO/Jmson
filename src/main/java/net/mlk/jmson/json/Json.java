@@ -3,7 +3,7 @@ package net.mlk.jmson.json;
 import java.util.*;
 import java.util.regex.Pattern;
 
-public class Json {
+public class Json implements JmsonObject{
     private static final Pattern pattern = Pattern.compile("(true)?(false)?([0-9]+[.]?[0-9]?)*");
     private final Map<String, Object> dict = new LinkedHashMap<>();
     private boolean parseTypes = true;
@@ -14,7 +14,20 @@ public class Json {
         this.parseTypes = parseTypes;
     }
 
-    private Json(Map<String, Object> dict) {
+    public Json(String rawJson) {
+        this.putAll(parseFromString(rawJson));
+    }
+
+    public Json(String rawJson, boolean parseTypes) {
+        this.putAll(parseFromString(rawJson, parseTypes));
+    }
+
+    public Json(Map<String, Object> dict) {
+        this.putAll(dict);
+    }
+
+    public Json(Map<String, Object> dict, boolean parseTypes) {
+        this.parseTypes = parseTypes;
         this.putAll(dict);
     }
 
@@ -40,21 +53,6 @@ public class Json {
 
     public Object get(String key) {
         return this.dict.get(key);
-    }
-
-    public <T> Object getByType(String key, Class<T> type) {
-        if (type == byte.class) {
-            return this.getByte(key);
-        } else if (type == short.class) {
-            return this.getShort(key);
-        } else if (type == int.class) {
-            return this.getInteger(key);
-        } else if (type == long.class) {
-            return this.getLong(key);
-        } else if (type == char.class) {
-            return this.getCharacter(key);
-        }
-        return type.cast(this.get(key));
     }
 
     public Map<String, Object> getAll() {
@@ -157,13 +155,13 @@ public class Json {
         return this.dict.containsKey(value);
     }
 
-    public static Json parseFromString(String rawJson) {
-        return parseFromString(rawJson, true);
-    }
-
     public Json setParseTypes(boolean parseTypes) {
         this.parseTypes = parseTypes;
         return this;
+    }
+
+    public static Json parseFromString(String rawJson) {
+        return parseFromString(rawJson, true);
     }
 
     public static Json parseFromString(String rawJson, boolean parseTypes) {
@@ -260,6 +258,10 @@ public class Json {
     }
 
     static String checkType(Object element, boolean parse_types) {
+        if (element == null) {
+            return "\"%s\"";
+        }
+
         boolean matches = pattern.matcher(element.toString()).matches();
         if (!element.toString().isEmpty() && (element instanceof Json || element instanceof JsonList || (parse_types && matches))) {
             return "%s";

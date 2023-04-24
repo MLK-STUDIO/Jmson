@@ -3,9 +3,10 @@ package net.mlk.jmson.json;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 
-public class JsonList {
-    private final java.util.List<Object> list = new ArrayList<>();
+public class JsonList implements JmsonObject{
+    private final List<Object> list = new ArrayList<>();
     private boolean parseTypes = true;
 
     public JsonList() { }
@@ -14,7 +15,20 @@ public class JsonList {
         this.parseTypes = parseTypes;
     }
 
-    public JsonList(java.util.List<Object> list) {
+    public JsonList(String rawJson) {
+        this.addAll(parseFromString(rawJson));
+    }
+
+    public JsonList(String rawJson, boolean parseTypes) {
+        this.addAll(parseFromString(rawJson, parseTypes));
+    }
+
+    public JsonList(List<Object> list) {
+        this.addAll(list);
+    }
+
+    public JsonList(List<Object> list, boolean parseTypes) {
+        this.parseTypes = parseTypes;
         this.addAll(list);
     }
 
@@ -28,7 +42,7 @@ public class JsonList {
         return this;
     }
 
-    public JsonList addAll(java.util.List<Object> list) {
+    public JsonList addAll(List<Object> list) {
         list.forEach(this::add);
         return this;
     }
@@ -42,22 +56,7 @@ public class JsonList {
         return this.list.get(index);
     }
 
-    public <T> Object getByType(int index, Class<T> type) {
-        if (type == byte.class) {
-            return this.getByte(index);
-        } else if (type == short.class) {
-            return this.getShort(index);
-        } else if (type == int.class) {
-            return this.getInteger(index);
-        } else if (type == long.class) {
-            return this.getLong(index);
-        } else if (type == char.class) {
-            return this.getCharacter(index);
-        }
-        return type.cast(this.get(index));
-    }
-
-    public java.util.List<Object> getAll() {
+    public List<Object> getAll() {
         return this.list;
     }
 
@@ -117,8 +116,8 @@ public class JsonList {
         return (Json) this.get(index);
     }
 
-    public java.util.List<Json> getListWithJsons(int index) {
-        java.util.List<Json> result = new ArrayList<>();
+    public List<Json> getListWithJsons(int index) {
+        List<Json> result = new ArrayList<>();
         for (Object obj : ((JsonList)this.get(index)).getAll()) {
             if (obj instanceof Json) {
                 result.add((Json) obj);
@@ -127,8 +126,8 @@ public class JsonList {
         return result;
     }
 
-    public java.util.List<Json> getListWithJsons() {
-        java.util.List<Json> result = new ArrayList<>();
+    public List<Json> getListWithJsons() {
+        List<Json> result = new ArrayList<>();
         for (Object obj : this.getAll()) {
             if (obj instanceof Json) {
                 result.add((Json) obj);
@@ -137,8 +136,8 @@ public class JsonList {
         return result;
     }
 
-    public java.util.List<JsonList> getListWithLists(int index) {
-        java.util.List<JsonList> result = new ArrayList<>();
+    public List<JsonList> getListWithLists(int index) {
+        List<JsonList> result = new ArrayList<>();
         for (Object obj : ((JsonList)this.get(index)).getAll()) {
             if (obj instanceof JsonList) {
                 result.add((JsonList) obj);
