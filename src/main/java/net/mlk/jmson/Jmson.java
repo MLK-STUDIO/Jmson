@@ -64,9 +64,10 @@ public class Jmson {
         for (Field field : fields) {
             try {
                 String name = field.getName();
+                Class<?> type = field.getType();
                 if (js.containsKey(name)) {
                     field.setAccessible(true);
-                    field.set(object, js.get(name));
+                    field.set(object, type == boolean.class ? js.getBoolean(name) : js.get(name));
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
