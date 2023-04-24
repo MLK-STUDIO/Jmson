@@ -65,9 +65,19 @@ public class Jmson {
             try {
                 String name = field.getName();
                 Class<?> type = field.getType();
+                Object value;
                 if (js.containsKey(name)) {
                     field.setAccessible(true);
-                    field.set(object, type == boolean.class ? js.getBoolean(name) : js.get(name));
+                    if (type.equals(byte.class)) value = js.getByte(name);
+                    else if (type.equals(short.class)) value = js.getShort(name);
+                    else if (type.equals(int.class)) value = js.getInteger(name);
+                    else if (type.equals(long.class)) value = js.getLong(name);
+                    else if (type.equals(float.class)) value = js.getFloat(name);
+                    else if (type.equals(double.class)) value = js.getDouble(name);
+                    else if (type.equals(boolean.class)) value = js.getBoolean(name);
+                    else value = js.get(name);
+
+                    field.set(object, value);
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
