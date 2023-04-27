@@ -4,34 +4,7 @@ import net.mlk.jmson.json.JmsonObject;
 import net.mlk.jmson.json.Json;
 import java.lang.reflect.Field;
 
-public class Jmson {
-    private Json json;
-
-    /**
-     * Default constructor which save value of json
-     * @param rawJson json string
-     */
-    public Jmson(String rawJson) {
-        this.json = parseJson(rawJson);
-    }
-
-    /**
-     * Constructor in which you can specify whether you want to disable type parsing in toString() method
-     * @param rawJson json string
-     * @param parseTypes specify type parsing
-     */
-    public Jmson(String rawJson, boolean parseTypes) {
-        this.json = parseJson(rawJson, parseTypes);
-    }
-
-    /**
-     * Constructor which parse json to specified object (Test function)
-     * @param rawJson json string
-     * @param object object with fields
-     */
-    public Jmson(String rawJson, JmsonObject object) {
-        parseJson(rawJson, object);
-    }
+public abstract class Jmson {
 
     /**
      * Default json parser method
@@ -75,6 +48,7 @@ public class Jmson {
                     else if (type.equals(float.class)) value = js.getFloat(name);
                     else if (type.equals(double.class)) value = js.getDouble(name);
                     else if (type.equals(boolean.class)) value = js.getBoolean(name);
+                    else if (type.equals(char.class)) value = js.getCharacter(name);
                     else value = js.get(name);
 
                     field.set(object, value);
@@ -126,13 +100,6 @@ public class Jmson {
             }
         }
         return json;
-    }
-
-    /**
-     * @return Json object
-     */
-    public Json getJson() {
-        return this.json;
     }
 
 }
