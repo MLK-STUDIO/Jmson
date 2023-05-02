@@ -102,4 +102,20 @@ public abstract class Jmson {
         return json;
     }
 
+    /**
+     * @param string the string to check
+     * @return true if it's a list
+     */
+    public static boolean isList(String string) {
+        return string.startsWith("[") && string.endsWith("]");
+    }
+
+    /**
+     * @param string the string to check
+     * @return true if it's a json
+     */
+    public static boolean isJson(String string) {
+        return string.startsWith("{") && string.endsWith("}");
+    }
+
 }

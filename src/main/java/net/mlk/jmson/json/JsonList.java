@@ -1,5 +1,7 @@
 package net.mlk.jmson.json;
 
+import net.mlk.jmson.Jmson;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -188,10 +190,10 @@ public class JsonList implements JmsonObject{
 
             if (!quote && level == 0 && current_char == ',' || i == toParse.length() - 1) {
                 String value = Json.fixElement(builder.toString());
-                if (Json.isDict(value)) {
+                if (Jmson.isJson(value)) {
                     list.add(Json.parseFromString(value, parseTypes));
                 }
-                else if (Json.isList(value)) {
+                else if (Jmson.isList(value)) {
                     list.add(JsonList.parseFromString(value, parseTypes));
                 }
                 else {

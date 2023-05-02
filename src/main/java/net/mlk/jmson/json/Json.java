@@ -1,5 +1,7 @@
 package net.mlk.jmson.json;
 
+import net.mlk.jmson.Jmson;
+
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -188,9 +190,9 @@ public class Json implements JmsonObject{
                 String key = fixElement(block[0]);
                 String value = block.length == 2 ? fixElement(block[1]) : null;
                 if (value != null) {
-                    if (isDict(value)) {
+                    if (Jmson.isJson(value)) {
                         json.put(key, Json.parseFromString(value, parseTypes));
-                    } else if (isList(value)) {
+                    } else if (Jmson.isList(value)) {
                         json.put(key, JsonList.parseFromString(value, parseTypes));
                     } else {
                         json.put(key, value);
@@ -228,14 +230,6 @@ public class Json implements JmsonObject{
             element = element.substring(0, element.length() - 1);
         }
         return element;
-    }
-
-    static boolean isList(String raw) {
-        return raw.startsWith("[") && raw.endsWith("]");
-    }
-
-    static boolean isDict(String raw) {
-        return raw.startsWith("{") && raw.endsWith("}");
     }
 
     static String[] split(String str) {
