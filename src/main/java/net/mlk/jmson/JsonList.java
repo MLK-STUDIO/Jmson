@@ -47,10 +47,18 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
         this.parseTypes = parseTypes;
     }
 
+    /**
+     * @param index index of the value
+     * @return string
+     */
     public String getString(int index) {
         return String.valueOf(super.get(index));
     }
 
+    /**
+     * @param index index of the value
+     * @return char
+     */
     public char getCharacter(int index) {
         String value = this.getString(index);
         if (value.length() != 1) {
@@ -59,18 +67,34 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
         return value.charAt(0);
     }
 
+    /**
+     * @param index index of the value
+     * @return byte
+     */
     public byte getByte(int index) {
         return (byte) this.getShort(index);
     }
 
+    /**
+     * @param index index of the value
+     * @return short
+     */
     public short getShort(int index) {
         return (short) this.getInteger(index);
     }
 
+    /**
+     * @param index index of the value
+     * @return int
+     */
     public int getInteger(int index) {
         return (int) this.getLong(index);
     }
 
+    /**
+     * @param index index of the value
+     * @return long
+     */
     public long getLong(int index) {
         String value = this.getString(index);
         if (value == null) {
@@ -79,10 +103,18 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
         return Long.parseLong(value);
     }
 
+    /**
+     * @param index index of the value
+     * @return float
+     */
     public float getFloat(int index) {
         return (float) this.getDouble(index);
     }
 
+    /**
+     * @param index index of the value
+     * @return double
+     */
     public double getDouble(int index) {
         String value = this.getString(index);
         if (value == null) {
@@ -91,18 +123,34 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
         return Double.parseDouble(value);
     }
 
+    /**
+     * @param index index of the value
+     * @return boolean
+     */
     public boolean getBoolean(int index) {
         return Boolean.parseBoolean(this.getString(index));
     }
 
+    /**
+     * @param index index of the value
+     * @return JsonList
+     */
     public JsonList getList(int index) {
         return (JsonList) super.get(index);
     }
 
+    /**
+     * @param index index of the value
+     * @return Json
+     */
     public Json getJson(int index) {
         return (Json) super.get(index);
     }
 
+    /**
+     * @param index index of the list
+     * @return list with jsons
+     */
     public List<Json> getListWithJsons(int index) {
         List<Json> result = new ArrayList<>();
         for (Object obj : ((JsonList)super.get(index))) {
@@ -113,6 +161,9 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
         return result;
     }
 
+    /**
+     * @return list with jsons
+     */
     public List<Json> getListWithJsons() {
         List<Json> result = new ArrayList<>();
         for (Object obj : this) {
@@ -123,12 +174,24 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
         return result;
     }
 
+    /**
+     * @param index index of the list
+     * @return list with lists
+     */
     public List<JsonList> getListWithLists(int index) {
         List<JsonList> result = new ArrayList<>();
         for (Object obj : ((JsonList)super.get(index))) {
             if (obj instanceof JsonList) {
                 result.add((JsonList) obj);
             }
+        }
+        return result;
+    }
+
+    public <T> List<T> getListOfType(Class<T> object) {
+        List<T> result = new ArrayList<>();
+        for (Object obj : this) {
+            result.add(object.cast(obj));
         }
         return result;
     }
@@ -216,16 +279,15 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
         StringBuilder block = new StringBuilder();
         for (int i = 0; i <= stringLength; i++) {
             char currentChar = i == stringLength ? '\0' : rawListString.charAt(i);
-            char prevChar = i == 0 ? '\0' : rawListString.charAt(i - 1);
 
             level += currentChar == '{' || currentChar == '[' ? 1 :
                     currentChar == '}' || currentChar == ']' ? -1 : 0;
 
-            if ((level == 0 &&currentChar == ',') || i == stringLength) {
+            if ((level == 0 && currentChar == ',') || i == stringLength) {
                 String value = block.toString().trim();
                 if (Json.isJson(value)) {
-                    String finalValue1 = value;
-                    service.execute(() -> super.add(new Json(finalValue1, this.parseTypes)));
+                    String finalValue = value;
+                    service.execute(() -> super.add(new Json(finalValue, this.parseTypes)));
                 } else if (isList(value)) {
                     String finalValue = value;
                     service.execute(() -> super.add(new JsonList(finalValue, this.parseTypes)));
