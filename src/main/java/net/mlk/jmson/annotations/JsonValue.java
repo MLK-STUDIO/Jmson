@@ -9,8 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 
 public @interface JsonValue {
-
     String name();
-    Class<?> type() default Class.class;
-
+    Class<?> type() default JsonValue.class;
+    boolean autoConvert() default true;
 }
