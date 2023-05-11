@@ -21,6 +21,14 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
     }
 
     /**
+     * Default list object with parseTypes
+     * @param parseTypes if you want to parseTypes
+     */
+    public JsonList(boolean parseTypes) {
+        this.parseTypes = parseTypes;
+    }
+
+    /**
      * List object parsed from string
      * type parsing is true by default
      * @param rawListString string to parse

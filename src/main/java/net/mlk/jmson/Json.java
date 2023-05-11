@@ -21,6 +21,14 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
     }
 
     /**
+     * Default json object with parseTypes
+     * @param parseTypes if you want to parseTypes
+     */
+    public Json(boolean parseTypes) {
+        this.parseTypes = parseTypes;
+    }
+
+    /**
      * Json object parsed from string
      * type parsing is true by default
      * @param rawJsonString string to parse
@@ -41,6 +49,12 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
 
     public String getString(String key) {
         return String.valueOf(super.get(key));
+    }
+
+    @Override
+    public Json put(String key, Object value) {
+        super.put(key, value);
+        return this;
     }
 
     public char getCharacter(String key) {
