@@ -1,8 +1,7 @@
 package net.mlk.jmson;
 
-import net.mlk.jmson.annotations.JsonValue;
-
-import java.lang.reflect.Field;
+import net.mlk.jmson.utils.JsonConverter;
+import net.mlk.jmson.utils.JsonConvertible;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -47,36 +46,63 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
         this.parser(this.validateString(Objects.requireNonNull(rawJsonString)));
     }
 
-    public String getString(String key) {
-        return String.valueOf(super.get(key));
-    }
-
+    /**
+     * Override method put with return Json
+     * @param key key of the value
+     * @param value value to put
+     * @return current Json
+     */
     @Override
     public Json put(String key, Object value) {
         super.put(key, value);
         return this;
     }
 
+    /**
+     * @param key key of the value
+     * @return string
+     */
+    public String getString(String key) {
+        return String.valueOf(super.get(key));
+    }
+
+    /**
+     * @param key key of the value
+     * @return char
+     */
     public char getCharacter(String key) {
         String value = this.getString(key);
-        if (value.length() != 1) {
-            return '\0';
-        }
         return value.charAt(0);
     }
 
+    /**
+     * @param key key of the value
+     * @return byte
+     */
     public byte getByte(String key) {
         return (byte) this.getShort(key);
     }
 
+    /**
+     * @param key key of the value
+     * @return short
+     */
     public short getShort(String key) {
         return (short) this.getInteger(key);
     }
 
+    /**
+     * @param key key of the value
+     * @return int
+     */
     public int getInteger(String key) {
         return (int) this.getLong(key);
     }
 
+    /**
+     * @param key key of the value
+     * @return long
+     */
     public long getLong(String key) {
         String value = this.getString(key);
         if (value == null) {
@@ -85,10 +111,18 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
         return Long.parseLong(value);
     }
 
+    /**
+     * @param key key of the value
+     * @return float
+     */
     public float getFloat(String key) {
         return (float) this.getDouble(key);
     }
 
+    /**
+     * @param key key of the value
+     * @return double
+     */
     public double getDouble(String key) {
         String value = this.getString(key);
         if (value == null) {
@@ -97,18 +131,34 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
         return Double.parseDouble(value);
     }
 
+    /**
+     * @param key key of the value
+     * @return bool
+     */
     public boolean getBoolean(String key) {
         return Boolean.parseBoolean(this.getString(key));
     }
 
+    /**
+     * @param key key of the value
+     * @return JsonList
+     */
     public JsonList getList(String key) {
         return (JsonList) this.get(key);
     }
 
+    /**
+     * @param key key of the value
+     * @return Json
+     */
     public Json getJson(String key) {
         return (Json) this.get(key);
     }
 
+    /**
+     * @param key key of the value
+     * @return List with jsons
+     */
     public List<Json> getListWithJsons(String key) {
         List<Json> result = new ArrayList<>();
         for (Object obj : ((JsonList)this.get(key))) {
@@ -119,6 +169,10 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
         return result;
     }
 
+    /**
+     * @param key key of the value
+     * @return list with lists
+     */
     public List<JsonList> getListWithLists(String key) {
         List<JsonList> result = new ArrayList<>();
         for (Object obj : ((JsonList)this.get(key))) {
@@ -133,82 +187,8 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
      * Method to put json values into object by name
      * @param object object to put
      */
-    public <T extends JsonObject> T parseToObject(T object) {
-        return parseToObject(this, object);
-    }
-
-    /**
-     * Method for put json values into object by name
-     * @param rawJsonString json string to parse
-     * @param object object to put
-     */
-    public static <T extends JsonObject> T parseToObject(String rawJsonString, T object) {
-        return parseToObject(parseFromString(rawJsonString), object);
-    }
-
-    /**
-     * Method for put json values into object by name
-     * @param json json to parse
-     * @param object object to put
-     */
-    public static <T extends JsonObject> T parseToObject(Json json, T object) {
-        Field[] fields = object.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            String fieldName = field.getName();
-            Class<?> type = field.getType();
-            boolean isJsonObject = Arrays.asList(type.getInterfaces()).contains(JsonObject.class) &&
-                    type != Json.class && type != JsonList.class;
-            boolean isList = type == JsonList.class;
-            boolean isJson = type == Json.class;
-
-            JsonValue jsonValue = field.getAnnotation(JsonValue.class);
-            if (jsonValue != null) {
-                fieldName = jsonValue.name();
-            }
-
-            if (json.containsKey(fieldName)) {
-                Object value = json.get(fieldName);
-                field.setAccessible(true);
-
-                try {
-                    if (isJsonObject) {
-                        Object obj = field.get(object);
-                        if (obj == null) {
-                            obj = type.newInstance();
-                            field.set(object, obj);
-                        }
-                        parseToObject(json.getJson(fieldName), (JsonObject) obj);
-                        continue;
-                    }
-                    if (jsonValue != null) {
-                        Class<?> toCast = jsonValue.type();
-                        if (toCast != Class.class && isList) {
-                            Object list = field.get(object);
-                            if (list == null) {
-                                list = JsonList.class.newInstance();
-                            }
-                            for (Json obj : json.getListWithJsons(fieldName)) {
-                                Object toWrite = toCast.newInstance();
-                                parseToObject(obj, (JsonObject) toWrite);
-                                ((JsonList) list).add(toWrite);
-                            }
-                            field.set(object, list);
-                            continue;
-                        } else if (toCast != Class.class) {
-                            field.set(object, castTo(json.get(jsonValue.name()), toCast));
-                            continue;
-                        }
-                    }
-                    if (type != value.getClass()) {
-                        value = castTo(value, type);
-                        field.set(object, value);
-                        continue;
-                    }
-                    field.set(object, value);
-                } catch (IllegalAccessException | InstantiationException ignored) {}
-            }
-        }
-        return object;
+    public <T extends JsonConvertible> T convertToObject(T object) {
+        return JsonConverter.convertToObject(this, object);
     }
 
     /**
@@ -282,40 +262,6 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
             }
         } else if (value.matches("[+-]?[0-9]*\\.[0-9]+")) {
             object = Double.parseDouble(value);
-        }
-        return object;
-    }
-
-    /**
-     * Method for cast object to given type if it meets the conditions
-     * @param object object to cast
-     * @param type type
-     * @return an object reduced to the type
-     */
-    private static Object castTo(Object object, Class<?> type) {
-        if (object == null) {
-            return null;
-        }
-
-        String value = object.toString();
-        if (type == byte.class || type == Byte.class) {
-            object = Byte.parseByte(value);
-        } else if (type == short.class || type == Short.class) {
-            object = Short.parseShort(value);
-        } else if (type == int.class || type == Integer.class) {
-            object = Integer.parseInt(value);
-        } else if (type == long.class || type == Long.class) {
-            object = Long.parseLong(value);
-        } else if (type == float.class || type == Float.class) {
-            object = Float.parseFloat(value);
-        } else if (type == double.class || type == Double.class) {
-            object = Double.parseDouble(value);
-        } else if (type == boolean.class || type == Boolean.class) {
-            object = Boolean.parseBoolean(value);
-        } else if (type == String.class) {
-            object = value;
-        } else {
-            object = type.cast(object);
         }
         return object;
     }
