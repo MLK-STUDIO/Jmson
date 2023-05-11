@@ -1,0 +1,6 @@
+plugins {
+    id 'java'
+}
+
+group = "net.mlk.jmson"
+version = "1.0"
