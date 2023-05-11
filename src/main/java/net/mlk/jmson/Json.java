@@ -34,7 +34,7 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
      * @param rawJsonString string to parse
      */
     public Json(String rawJsonString) {
-        this.parseFromString(this.validateString(Objects.requireNonNull(rawJsonString)));
+        this.parser(this.validateString(Objects.requireNonNull(rawJsonString)));
     }
 
     /**
@@ -44,7 +44,7 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
      */
     public Json(String rawJsonString, boolean parseTypes) {
         this.parseTypes = parseTypes;
-        this.parseFromString(this.validateString(Objects.requireNonNull(rawJsonString)));
+        this.parser(this.validateString(Objects.requireNonNull(rawJsonString)));
     }
 
     public String getString(String key) {
@@ -143,7 +143,7 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
      * @param object object to put
      */
     public static <T extends JsonObject> T parseToObject(String rawJsonString, T object) {
-        return parseToObject(parseFromStrnig(rawJsonString), object);
+        return parseToObject(parseFromString(rawJsonString), object);
     }
 
     /**
@@ -325,7 +325,7 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
      * @param rawJsonString string to parse
      * @return Json object
      */
-    public static Json parseFromStrnig(String rawJsonString) {
+    public static Json parseFromString(String rawJsonString) {
         return new Json(rawJsonString);
     }
 
@@ -335,7 +335,7 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
      * @param parseTypes if you need to parse types
      * @return Json object
      */
-    public static Json parseFromStrnig(String rawJsonString, boolean parseTypes) {
+    public static Json parseFromString(String rawJsonString, boolean parseTypes) {
         return new Json(rawJsonString, parseTypes);
     }
 
@@ -343,7 +343,7 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
      * Parse current json from string
      * @param rawJsonString string to parse
      */
-    private void parseFromString(String rawJsonString) {
+    private void parser(String rawJsonString) {
         if (rawJsonString.isEmpty()) {
             return;
         }

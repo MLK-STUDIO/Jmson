@@ -34,7 +34,7 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
      * @param rawListString string to parse
      */
     public JsonList(String rawListString) {
-        this.parseFromString(this.validateString(Objects.requireNonNull(rawListString)));
+        this.parser(this.validateString(Objects.requireNonNull(rawListString)));
     }
 
     /**
@@ -181,10 +181,29 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
     }
 
     /**
+     * parse List from string
+     * @param rawListString string to parse
+     * @return Json object
+     */
+    public static JsonList parseFromString(String rawListString) {
+        return new JsonList(rawListString);
+    }
+
+    /**
+     * parse List from string
+     * @param rawListString string to parse
+     * @param parseTypes if you need to parse types
+     * @return Json object
+     */
+    public static JsonList parseFromString(String rawListString, boolean parseTypes) {
+        return new JsonList(rawListString, parseTypes);
+    }
+
+    /**
      * Parse current list from string
      * @param rawListString string to parse
      */
-    private void parseFromString(String rawListString) {
+    private void parser(String rawListString) {
         if (rawListString.isEmpty()) {
             return;
         }
