@@ -1,5 +1,6 @@
 package net.mlk.jmson;
 
+import com.sun.istack.internal.NotNull;
 import net.mlk.jmson.utils.JsonConverter;
 import net.mlk.jmson.utils.JsonConvertible;
 import java.util.*;
