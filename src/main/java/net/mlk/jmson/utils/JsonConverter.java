@@ -65,6 +65,7 @@ public class JsonConverter {
      */
     private static <T extends JsonConvertible> T convertToObject(Json json, T object, boolean recurse) {
         Class<?> clazz = object.getClass();
+        Class<?> superClass = clazz.getSuperclass();
         Field[] fields = new Field[0];
 
         try {
@@ -72,7 +73,6 @@ public class JsonConverter {
             if (subJson != null && !recurse) {
                 String name = subJson.key();
                 boolean includeParent = subJson.includeParent();
-                Class<?> superClass = clazz.getSuperclass();
 
                 if (!name.isEmpty() && json.containsKey(name) || !subJson.checkKeyExist()) {
                     Json jsonPart = json.getJson(name);
@@ -117,7 +117,7 @@ public class JsonConverter {
                         convertToObject(json.getJson(fieldName), (JsonConvertible) instance);
                         continue;
                     }
-                    else if (isList && jsonValue != null) {
+                    else if (isList && jsonValue != null && jsonValue.type() != JsonValue.class) {
                         Class<?> listType = jsonValue.type();
                         if (!Arrays.asList(listType.getInterfaces()).contains(JsonConvertible.class)) {
                             throw new RuntimeException("Object " + fieldType + " doesn't implements JsonConvertible interface");
