@@ -104,7 +104,7 @@ public class JsonConverter {
                 boolean isList = fieldType == JsonList.class;
                 JsonValue jsonValue = field.getAnnotation(JsonValue.class);
                 if (jsonValue != null) {
-                    fieldName = jsonValue.name();
+                    fieldName = jsonValue.key();
                 }
 
                 if (json.containsKey(fieldName)) {
