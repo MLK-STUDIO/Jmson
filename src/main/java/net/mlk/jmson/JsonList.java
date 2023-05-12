@@ -1,16 +1,9 @@
 package net.mlk.jmson;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 import java.util.regex.Pattern;
 
-public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject {
+public class JsonList extends ArrayList<Object> implements JsonObject {
     private boolean parseTypes = true;
 
     /**
@@ -271,9 +264,6 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
             return;
         }
 
-        int numThreads = Runtime.getRuntime().availableProcessors();
-        ExecutorService service = Executors.newFixedThreadPool(numThreads);
-
         int level = 0;
         int stringLength = rawListString.length();
         StringBuilder block = new StringBuilder();
@@ -286,11 +276,9 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
             if ((level == 0 && currentChar == ',') || i == stringLength) {
                 String value = block.toString().trim();
                 if (Json.isJson(value)) {
-                    String finalValue = value;
-                    service.execute(() -> super.add(new Json(finalValue, this.parseTypes)));
+                    super.add(new Json(value, this.parseTypes));
                 } else if (isList(value)) {
-                    String finalValue = value;
-                    service.execute(() -> super.add(new JsonList(finalValue, this.parseTypes)));
+                    super.add(new JsonList(value, this.parseTypes));
                 } else {
                     if (value.startsWith("\"") && value.endsWith("\"")) {
                         value = value.substring(1, value.length() - 1);
@@ -305,13 +293,6 @@ public class JsonList extends CopyOnWriteArrayList<Object> implements JsonObject
                 continue;
             }
             block.append(currentChar);
-        }
-
-        service.shutdown();
-        try {
-            service.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            service.shutdownNow();
         }
     }
 

@@ -3,13 +3,9 @@ package net.mlk.jmson;
 import net.mlk.jmson.utils.JsonConverter;
 import net.mlk.jmson.utils.JsonConvertible;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-public class Json extends ConcurrentHashMap<String, Object> implements JsonObject {
+public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     private boolean parseTypes = true;
 
     /**
@@ -213,9 +209,10 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
         Pattern pattern = Pattern.compile("(true)?(false)?([0-9]+[.]?[0-9]?)*");
         StringBuilder builder = new StringBuilder(super.size() * 16);
         builder.append("{");
-        Iterator<Entry<String, Object>> iterator = entrySet().iterator();
+
+        Iterator<Map.Entry<String, Object>> iterator = entrySet().iterator();
         while (iterator.hasNext()) {
-            Entry<String, Object> entry = iterator.next();
+            Map.Entry<String, Object> entry = iterator.next();
             String key = entry.getKey();
             Object obj = entry.getValue();
             if (obj == null) {
@@ -294,9 +291,6 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
             return;
         }
 
-        int numThreads = Runtime.getRuntime().availableProcessors();
-        ExecutorService service = Executors.newFixedThreadPool(numThreads);
-
         int level = 0;
         int stringLength = rawJsonString.length();
         StringBuilder block = new StringBuilder();
@@ -332,13 +326,9 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
                     continue;
                 }
                 if (isJson(value)) {
-                    String finalKey = key;
-                    String finalValue = value;
-                    service.execute(() -> super.put(finalKey, new Json(finalValue, this.parseTypes)));
+                    super.put(key, new Json(value, this.parseTypes));
                 } else if (JsonList.isList(value)) {
-                    String finalKey = key;
-                    String finalValue = value;
-                    service.execute(() -> super.put(finalKey, new JsonList(finalValue, this.parseTypes)));
+                    super.put(key, new JsonList(value, this.parseTypes));
                 } else {
                     if (this.parseTypes) {
                         super.put(key, parseToType(value));
@@ -347,12 +337,6 @@ public class Json extends ConcurrentHashMap<String, Object> implements JsonObjec
                     }
                 }
             }
-        }
-        service.shutdown();
-        try {
-            service.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            service.shutdownNow();
         }
     }
 
