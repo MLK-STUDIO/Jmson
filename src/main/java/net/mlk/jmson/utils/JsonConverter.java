@@ -6,7 +6,9 @@ import net.mlk.jmson.annotations.JsonValue;
 import net.mlk.jmson.annotations.SubJson;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class JsonConverter {
 
@@ -66,7 +68,7 @@ public class JsonConverter {
     private static <T extends JsonConvertible> T convertToObject(Json json, T object, boolean recurse) {
         Class<?> clazz = object.getClass();
         Class<?> superClass = clazz.getSuperclass();
-        Field[] fields = new Field[0];
+        List<Field> fields = new ArrayList<>();
 
         try {
             SubJson subJson = object.getClass().getAnnotation(SubJson.class);
@@ -80,14 +82,20 @@ public class JsonConverter {
                         throw new RuntimeException("Json object by key " + name + " doesn't exists.");
                     }
                     convertToObject(json.getJson(name), object, true);
+                } else {
+                    convertToObject(json, object, true);
                 }
-                if (includeParent && superClass != null &&
-                        Arrays.asList(superClass.getInterfaces()).contains(JsonConvertible.class)) {
-                    fields = superClass.getDeclaredFields();
+                if (includeParent) {
+                    while (superClass != null &&
+                            Arrays.asList(superClass.getInterfaces()).contains(JsonConvertible.class)) {
+                        fields.addAll(Arrays.asList(superClass.getDeclaredFields()));
+                        superClass = superClass.getSuperclass();
+                    }
                 }
             } else {
-                fields = clazz.getDeclaredFields();
+                fields = Arrays.asList(clazz.getDeclaredFields());
             }
+
             for (Field field : fields) {
                 field.setAccessible(true);
                 String fieldName = field.getName();
@@ -98,6 +106,7 @@ public class JsonConverter {
                 if (jsonValue != null) {
                     fieldName = jsonValue.name();
                 }
+
                 if (json.containsKey(fieldName)) {
                     Object value = json.get(fieldName);
                     if (jsonValue != null) {
