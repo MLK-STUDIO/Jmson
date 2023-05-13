@@ -39,6 +39,16 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         this(rawListString);
         this.parseTypes = parseTypes;
     }
+    /**
+     *
+     * Custom method for add values
+     * @param value value to put
+     * @return current List
+     */
+    public JsonList put(Object value) {
+        super.add(value);
+        return this;
+    }
 
     /**
      * @param index index of the value
