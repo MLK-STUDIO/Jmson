@@ -46,7 +46,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
      * @param value value to put
      * @return current List
      */
-    public JsonList put(Object value) {
+    public JsonList append(Object value) {
         super.add(value);
         return this;
     }
