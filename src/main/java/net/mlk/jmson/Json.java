@@ -44,13 +44,12 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     }
 
     /**
-     * Override method put with return Json
+     * Custom method for put values
      * @param key key of the value
      * @param value value to put
      * @return current Json
      */
-    @Override
-    public Json put(String key, Object value) {
+    public Json add(String key, Object value) {
         super.put(key, value);
         return this;
     }
