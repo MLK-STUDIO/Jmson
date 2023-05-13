@@ -39,6 +39,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         this(rawListString);
         this.parseTypes = parseTypes;
     }
+
     /**
      *
      * Custom method for add values
