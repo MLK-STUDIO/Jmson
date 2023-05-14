@@ -151,12 +151,10 @@ public class JsonConverter {
                                 }
                             }
 
-                            if (objectType != JsonValue.class) {
-                                if (!Arrays.asList(objectType.getInterfaces()).contains(JsonConvertible.class)) {
-                                    throw new RuntimeException("Object " + objectType + " doesn't implements JsonConvertible interface");
-                                }
-                                list.add(convertToObject(obj, (JsonConvertible) objectType.newInstance()));
+                            if (!Arrays.asList(objectType.getInterfaces()).contains(JsonConvertible.class)) {
+                                throw new RuntimeException("Object " + objectType + " doesn't implements JsonConvertible interface");
                             }
+                            list.add(convertToObject(obj, (JsonConvertible) objectType.newInstance()));
                         }
                         value = list;
                     }
