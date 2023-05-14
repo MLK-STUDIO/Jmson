@@ -4,6 +4,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.ArrayList;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
@@ -11,5 +12,6 @@ import java.lang.annotation.Target;
 public @interface JsonValue {
     String key();
     Class<?> type() default JsonValue.class;
+    Class<?>[] types() default JsonValue.class;
     boolean autoConvert() default true;
 }

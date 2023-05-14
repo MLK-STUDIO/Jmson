@@ -6,6 +6,8 @@ import net.mlk.jmson.annotations.JsonValue;
 import net.mlk.jmson.annotations.SubJson;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -111,7 +113,7 @@ public class JsonConverter {
                     Object value = json.get(fieldName);
                     if (jsonValue != null) {
                         if (jsonValue.autoConvert()) {
-                            if (fieldType != value.getClass()) {
+                            if (value != null && fieldType != value.getClass()) {
                                 value = castTo(value, fieldType);
                             }
                         }
@@ -123,17 +125,35 @@ public class JsonConverter {
                             instance = fieldType.newInstance();
                             field.set(object, instance);
                         }
-                        convertToObject(json.getJson(fieldName), (JsonConvertible) instance);
-                        continue;
-                    }
-                    else if (isList && jsonValue != null && jsonValue.type() != JsonValue.class) {
-                        Class<?> listType = jsonValue.type();
-                        if (!Arrays.asList(listType.getInterfaces()).contains(JsonConvertible.class)) {
-                            throw new RuntimeException("Object " + fieldType + " doesn't implements JsonConvertible interface");
+                        if (Json.isJson(json.getString(fieldName))) {
+                            convertToObject(json.getJson(fieldName), (JsonConvertible) instance);
+                            continue;
                         }
+                    }
+                    else if (isList && jsonValue != null) {
                         JsonList list = new JsonList();
                         for (Json obj : json.getListWithJsons(fieldName)) {
-                            list.add(convertToObject(obj, (JsonConvertible) listType.newInstance()));
+                            Class<?> objectType = jsonValue.type();
+
+                            if (jsonValue.types().length != 0 && jsonValue.types()[0] != JsonValue.class) { // checking object class
+                                for (Class<?> type : jsonValue.types()) {
+                                    try {
+                                        Method method = type.getDeclaredMethod("validateJson", Json.class);
+                                        method.setAccessible(true);
+                                        if ((boolean) method.invoke(type.newInstance(), obj)) {
+                                            objectType = type;
+                                        }
+                                    } catch (NoSuchMethodException | InvocationTargetException ignored) {
+                                    } // Method is optional
+                                }
+                            }
+
+                            if (objectType != JsonValue.class) {
+                                if (!Arrays.asList(objectType.getInterfaces()).contains(JsonConvertible.class)) {
+                                    throw new RuntimeException("Object " + objectType + " doesn't implements JsonConvertible interface");
+                                }
+                                list.add(convertToObject(obj, (JsonConvertible) objectType.newInstance()));
+                            }
                         }
                         value = list;
                     }

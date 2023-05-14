@@ -259,6 +259,8 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
             }
         } else if (value.matches("[+-]?[0-9]*\\.[0-9]+")) {
             object = Double.parseDouble(value);
+        } else if (value.equals("null")) {
+            object = null;
         }
         return object;
     }
