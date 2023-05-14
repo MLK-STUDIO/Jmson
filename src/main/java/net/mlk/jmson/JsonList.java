@@ -195,7 +195,9 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     public <T> List<T> getListOfType(Class<T> object) {
         List<T> result = new ArrayList<>();
         for (Object obj : this) {
-            result.add(object.cast(obj));
+            if (object.isInstance(obj)) {
+                result.add(object.cast(obj));
+            }
         }
         return result;
     }
