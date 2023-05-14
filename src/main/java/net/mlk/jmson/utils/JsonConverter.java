@@ -8,6 +8,10 @@ import net.mlk.jmson.annotations.SubJson;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -112,10 +116,13 @@ public class JsonConverter {
                 if (json.containsKey(fieldName)) {
                     Object value = json.get(fieldName);
                     if (jsonValue != null) {
-                        if (jsonValue.autoConvert()) {
+                        if (jsonValue.autoConvert() && jsonValue.dateFormat().isEmpty()) {
                             if (value != null && fieldType != value.getClass()) {
                                 value = castTo(value, fieldType);
                             }
+                        } else if (fieldType == LocalDateTime.class && !jsonValue.dateFormat().isEmpty()) {
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(jsonValue.dateFormat());
+                            value = LocalDateTime.parse((CharSequence) value, formatter);
                         }
                     }
 
