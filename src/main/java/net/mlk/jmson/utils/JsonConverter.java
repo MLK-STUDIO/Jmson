@@ -74,56 +74,55 @@ public class JsonConverter {
         Class<?> superClass = clazz.getSuperclass();
         List<Field> fields = new ArrayList<>();
 
-        try {
-            SubJson subJson = object.getClass().getAnnotation(SubJson.class);
-            if (subJson != null && !recurse) {
-                String name = subJson.key();
-                boolean includeParent = subJson.includeParent();
+        SubJson subJson = object.getClass().getAnnotation(SubJson.class);
+        if (subJson != null && !recurse) {
+            String name = subJson.key();
+            boolean includeParent = subJson.includeParent();
 
-                if (!name.isEmpty() && json.containsKey(name) || !subJson.checkKeyExist()) {
-                    Json jsonPart = json.getJson(name);
-                    if (jsonPart == null) {
-                        throw new RuntimeException("Json object by key " + name + " doesn't exists.");
-                    }
-                    convertToObject(json.getJson(name), object, true);
-                } else {
-                    convertToObject(json, object, true);
+            if (!name.isEmpty() && json.containsKey(name) || !subJson.checkKeyExist()) {
+                Json jsonPart = json.getJson(name);
+                if (jsonPart == null) {
+                    throw new RuntimeException("Json object by key " + name + " doesn't exists.");
                 }
-                if (includeParent) {
-                    while (superClass != null &&
-                            Arrays.asList(superClass.getInterfaces()).contains(JsonConvertible.class)) {
-                        fields.addAll(Arrays.asList(superClass.getDeclaredFields()));
-                        superClass = superClass.getSuperclass();
-                    }
-                }
+                convertToObject(json.getJson(name), object, true);
             } else {
-                fields = Arrays.asList(clazz.getDeclaredFields());
+                convertToObject(json, object, true);
+            }
+            if (includeParent) {
+                while (superClass != null &&
+                        Arrays.asList(superClass.getInterfaces()).contains(JsonConvertible.class)) {
+                    fields.addAll(Arrays.asList(superClass.getDeclaredFields()));
+                    superClass = superClass.getSuperclass();
+                }
+            }
+        } else {
+            fields = Arrays.asList(clazz.getDeclaredFields());
+        }
+
+        for (Field field : fields) {
+            field.setAccessible(true);
+            String fieldName = field.getName();
+            Class<?> fieldType = field.getType();
+            boolean isConvertible = Arrays.asList(fieldType.getInterfaces()).contains(JsonConvertible.class);
+            boolean isList = fieldType == JsonList.class;
+            JsonValue jsonValue = field.getAnnotation(JsonValue.class);
+            if (jsonValue != null) {
+                fieldName = jsonValue.key();
             }
 
-            for (Field field : fields) {
-                field.setAccessible(true);
-                String fieldName = field.getName();
-                Class<?> fieldType = field.getType();
-                boolean isConvertible = Arrays.asList(fieldType.getInterfaces()).contains(JsonConvertible.class);
-                boolean isList = fieldType == JsonList.class;
-                JsonValue jsonValue = field.getAnnotation(JsonValue.class);
+            if (json.containsKey(fieldName)) {
+                Object value = json.get(fieldName);
                 if (jsonValue != null) {
-                    fieldName = jsonValue.key();
-                }
-
-                if (json.containsKey(fieldName)) {
-                    Object value = json.get(fieldName);
-                    if (jsonValue != null) {
-                        if (jsonValue.autoConvert() && jsonValue.dateFormat().isEmpty()) {
-                            if (value != null && fieldType != value.getClass()) {
-                                value = castTo(value, fieldType);
-                            }
-                        } else if (fieldType == LocalDateTime.class && !jsonValue.dateFormat().isEmpty()) {
-                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(jsonValue.dateFormat());
-                            value = LocalDateTime.parse((CharSequence) value, formatter);
+                    if (jsonValue.autoConvert() && jsonValue.dateFormat().isEmpty()) {
+                        if (value != null && fieldType != value.getClass()) {
+                            value = castTo(value, fieldType);
                         }
+                    } else if (fieldType == LocalDateTime.class && !jsonValue.dateFormat().isEmpty()) {
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(jsonValue.dateFormat());
+                        value = LocalDateTime.parse((CharSequence) value, formatter);
                     }
-
+                }
+                try {
                     if (isConvertible) {
                         Object instance = field.get(object);
                         if (instance == null) {
@@ -134,8 +133,7 @@ public class JsonConverter {
                             convertToObject(json.getJson(fieldName), (JsonConvertible) instance);
                             continue;
                         }
-                    }
-                    else if (isList && jsonValue != null) {
+                    } else if (isList && jsonValue != null) {
                         JsonList list = new JsonList();
                         for (Json obj : json.getListWithJsons(fieldName)) {
                             Class<?> objectType = jsonValue.type();
@@ -163,10 +161,15 @@ public class JsonConverter {
                         value = list;
                     }
                     field.set(object, value);
+                } catch (IllegalAccessException | InstantiationException e) {
+                    throw new RuntimeException(e);
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException("Can not set " + fieldName +
+                            " to " + value + ". Possibly due to type incompatibility. " +
+                            "\nTry disabling type parsing in json or use auto-conversion via @JsonValue(key=\"" + fieldName + "\")." +
+                            "\nError message: " + e.getMessage() );
                 }
             }
-        } catch (IllegalAccessException | InstantiationException e) {
-            throw new RuntimeException(e);
         }
 
         return object;
