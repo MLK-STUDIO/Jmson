@@ -133,28 +133,32 @@ public class JsonConverter {
                             convertToObject(json.getJson(fieldName), (JsonConvertible) instance);
                             continue;
                         }
-                    } else if (isList && jsonValue != null) {
+                    } else if (isList) {
                         JsonList list = new JsonList();
-                        for (Json obj : json.getListWithJsons(fieldName)) {
-                            Class<?> objectType = jsonValue.type();
+                        if (jsonValue != null) {
+                            for (Json obj : json.getListWithJsons(fieldName)) {
+                                Class<?> objectType = jsonValue.type();
 
-                            if (jsonValue.types().length != 0 && jsonValue.types()[0] != JsonValue.class) { // checking object class
-                                for (Class<?> type : jsonValue.types()) {
-                                    try {
-                                        Method method = type.getDeclaredMethod("validateJson", Json.class);
-                                        method.setAccessible(true);
-                                        if ((boolean) method.invoke(type.newInstance(), obj)) {
-                                            objectType = type;
-                                        }
-                                    } catch (NoSuchMethodException | InvocationTargetException ignored) {
-                                    } // Method is optional
+                                if (jsonValue.types().length != 0 && jsonValue.types()[0] != JsonValue.class) { // checking object class
+                                    for (Class<?> type : jsonValue.types()) {
+                                        try {
+                                            Method method = type.getDeclaredMethod("validateJson", Json.class);
+                                            method.setAccessible(true);
+                                            if ((boolean) method.invoke(type.newInstance(), obj)) {
+                                                objectType = type;
+                                            }
+                                        } catch (NoSuchMethodException | InvocationTargetException ignored) {
+                                        } // Method is optional
+                                    }
                                 }
-                            }
 
-                            if (!Arrays.asList(objectType.getInterfaces()).contains(JsonConvertible.class)) {
-                                throw new RuntimeException("Object " + objectType + " doesn't implements JsonConvertible interface");
+                                if (!Arrays.asList(objectType.getInterfaces()).contains(JsonConvertible.class)) {
+                                    throw new RuntimeException("Object " + objectType + " doesn't implements JsonConvertible interface");
+                                }
+                                list.add(convertToObject(obj, (JsonConvertible) objectType.newInstance()));
                             }
-                            list.add(convertToObject(obj, (JsonConvertible) objectType.newInstance()));
+                        } else {
+                            list = json.getList(fieldName);
                         }
                         value = list;
                     }
