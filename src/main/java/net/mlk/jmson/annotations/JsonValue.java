@@ -15,4 +15,5 @@ public @interface JsonValue {
     Class<?>[] types() default JsonValue.class;
     String dateFormat() default "";
     boolean autoConvert() default true;
+    boolean skipNull() default false;
 }

@@ -173,6 +173,31 @@ public class JsonConverter {
         return object;
     }
 
+    public static Json convertToJson(JsonConvertible object) {
+        Field[] fields = object.getClass().getDeclaredFields();
+        Json json = new Json();
+
+        for (Field field : fields) {
+            field.setAccessible(true);
+            JsonValue jsonValue = field.getAnnotation(JsonValue.class);
+            String fieldName = jsonValue == null ? field.getName() : jsonValue.key();
+            Class<?> fieldType = field.getType();
+            try {
+                Object value = field.get(object);
+
+                if (jsonValue != null ) {
+                    if (value == null && jsonValue.skipNull()) {
+                        continue;
+                    }
+                }
+                json.add(fieldName, value);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return json;
+    }
+
     /**
      * Method for cast object to given type if it meets the conditions
      * @param object object to cast
