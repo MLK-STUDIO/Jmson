@@ -206,35 +206,22 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
 
     @Override
     public String toString() {
-        Pattern pattern = Pattern.compile("(true)?(false)?([0-9]+[.]?[0-9]?)*");
-        StringBuilder builder = new StringBuilder(super.size() * 16);
-        builder.append("{");
-
+        StringBuilder builder = new StringBuilder("{");
         Iterator<Map.Entry<String, Object>> iterator = entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<String, Object> entry = iterator.next();
             String key = entry.getKey();
             Object obj = entry.getValue();
-            if (obj == null) {
-                if (this.parseTypes) {
-                    builder.append("\"").append(key).append("\":null");
-                } else {
-                    builder.append("\"").append(key).append("\":\"").append("null").append("\"");
-                }
+            if (!(obj instanceof String)) {
+                builder.append("\"").append(key).append("\":").append(obj);
             } else {
-                boolean matches = pattern.matcher(obj.toString()).matches();
-                if (!obj.toString().isEmpty() && (obj instanceof Json || obj instanceof JsonList || (this.parseTypes && matches))) {
-                    builder.append("\"").append(key).append("\":").append(obj);
-                } else {
-                    builder.append("\"").append(key).append("\":\"").append(obj).append("\"");
-                }
+                builder.append("\"").append(key).append("\":\"").append(obj).append("\"");
             }
             if (iterator.hasNext()) {
-                builder.append(", ");
+                builder.append(",");
             }
         }
-        builder.append("}");
-        return builder.toString();
+        return builder.append("}").toString();
     }
 
     /**
