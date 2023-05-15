@@ -182,6 +182,9 @@ public class JsonConverter {
      * @return parsed json
      */
     public static Json convertToJson(JsonConvertible object) {
+        if (object == null) {
+            return null;
+        }
         Class<?> clazz = object.getClass();
         if (!Arrays.asList(clazz.getInterfaces()).contains(JsonConvertible.class)) {
             throw new IllegalArgumentException("Object doesn't implements JsonConvertible.class");
@@ -195,9 +198,12 @@ public class JsonConverter {
             String fieldName = jsonValue == null ? field.getName() : jsonValue.key();
             Class<?> fieldType = field.getType();
             boolean isList = fieldType == JsonList.class;
+            boolean isConvertible = Arrays.asList(fieldType.getInterfaces()).contains(JsonConvertible.class);
             try {
                 Object value = field.get(object);
-
+                if (isConvertible) {
+                    value = convertToJson((JsonConvertible) value);
+                }
                 if (isList && value != null) {
                     JsonList list = new JsonList();
                     for (Object obj : (JsonList) value) {
@@ -209,7 +215,6 @@ public class JsonConverter {
                     }
                     value = list;
                  }
-
                 if (jsonValue != null && !isList) {
                     if (value == null && jsonValue.skipNull()) {
                         continue;
