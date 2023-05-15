@@ -173,6 +173,11 @@ public class JsonConverter {
         return object;
     }
 
+    /**
+     * parse object to json
+     * @param object object to parse
+     * @return parsed json
+     */
     public static Json convertToJson(JsonConvertible object) {
         Field[] fields = object.getClass().getDeclaredFields();
         Json json = new Json();
@@ -184,10 +189,12 @@ public class JsonConverter {
             Class<?> fieldType = field.getType();
             try {
                 Object value = field.get(object);
-
                 if (jsonValue != null ) {
                     if (value == null && jsonValue.skipNull()) {
                         continue;
+                    }
+                    if (jsonValue.type() != fieldType) {
+                        value = castTo(value, jsonValue.type());
                     }
                 }
                 json.add(fieldName, value);
