@@ -71,6 +71,9 @@ public class JsonConverter {
      */
     private static <T extends JsonConvertible> T convertToObject(Json json, T object, boolean recurse) {
         Class<?> clazz = object.getClass();
+        if (!Arrays.asList(clazz.getInterfaces()).contains(JsonConvertible.class)) {
+            throw new IllegalArgumentException("Object " + clazz.getName() + " doesn't implements JsonConvertible.class");
+        }
         Class<?> superClass = clazz.getSuperclass();
         List<Field> fields = new ArrayList<>();
 
@@ -179,7 +182,11 @@ public class JsonConverter {
      * @return parsed json
      */
     public static Json convertToJson(JsonConvertible object) {
-        Field[] fields = object.getClass().getDeclaredFields();
+        Class<?> clazz = object.getClass();
+        if (!Arrays.asList(clazz.getInterfaces()).contains(JsonConvertible.class)) {
+            throw new IllegalArgumentException("Object doesn't implements JsonConvertible.class");
+        }
+        Field[] fields = clazz.getDeclaredFields();
         Json json = new Json();
 
         for (Field field : fields) {
@@ -187,9 +194,23 @@ public class JsonConverter {
             JsonValue jsonValue = field.getAnnotation(JsonValue.class);
             String fieldName = jsonValue == null ? field.getName() : jsonValue.key();
             Class<?> fieldType = field.getType();
+            boolean isList = fieldType == JsonList.class;
             try {
                 Object value = field.get(object);
-                if (jsonValue != null ) {
+
+                if (isList && value != null) {
+                    JsonList list = new JsonList();
+                    for (Object obj : (JsonList) value) {
+                        if (Arrays.asList(obj.getClass().getInterfaces()).contains(JsonConvertible.class)) {
+                            list.add(convertToJson((JsonConvertible) obj));
+                        } else {
+                            list.add(obj);
+                        }
+                    }
+                    value = list;
+                 }
+
+                if (jsonValue != null && !isList) {
                     if (value == null && jsonValue.skipNull()) {
                         continue;
                     }
