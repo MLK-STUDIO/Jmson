@@ -332,7 +332,7 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                 } else if (JsonList.isList(value)) {
                     super.put(key, new JsonList(value, this.parseTypes));
                 } else {
-                    if (this.parseTypes) {
+                    if (this.parseTypes && prevChar != '\"') {
                         super.put(key, parseToType(value));
                     } else {
                         super.put(key, value);

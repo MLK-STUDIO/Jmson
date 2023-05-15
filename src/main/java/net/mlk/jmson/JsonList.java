@@ -293,10 +293,12 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
                 } else if (isList(value)) {
                     super.add(new JsonList(value, this.parseTypes));
                 } else {
+                    boolean quoted = false;
                     if (value.startsWith("\"") && value.endsWith("\"")) {
                         value = value.substring(1, value.length() - 1);
+                        quoted = true;
                     }
-                    if (this.parseTypes) {
+                    if (this.parseTypes && !quoted) {
                         super.add(Json.parseToType(value));
                     } else {
                         super.add(value);
