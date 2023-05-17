@@ -2,265 +2,273 @@ package net.mlk.jmson.utils;
 
 import net.mlk.jmson.Json;
 import net.mlk.jmson.JsonList;
-import net.mlk.jmson.annotations.JsonValue;
-import net.mlk.jmson.annotations.SubJson;
+import net.mlk.jmson.annotations.JsonObject;
+import net.mlk.jmson.annotations.JsonField;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
+import java.util.Iterator;
 
 public class JsonConverter {
 
     /**
-     * Convert string json to Object
-     * @param rawJsonString json string
-     * @param object a class of object for example Test.class
-     * @return new Instance of given object
-     * @param <T> class that implements JsonConvertible
+     * convert json to object & create new instance
+     * @param json json to convert
+     * @param clazz class to create object
+     * @return new class instance
+     * @param <T> class  that extends JsonConvertible
      */
-    public static <T extends JsonConvertible> T convertToObject(String rawJsonString, Class<T> object) {
+    public static <T extends JsonConvertible> T convertToObject(Json json, Class<T> clazz) {
         try {
-            return convertToObject(rawJsonString, object.newInstance());
+            return convertToObject(json, clazz.newInstance());
         } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
 
     /**
-     * Convert string json to Object
-     * @param rawJsonString json string
-     * @param object instance of the object
-     * @return object
-     * @param <T> class that implements JsonConvertible
+     * convert json to object
+     * @param json json to convert
+     * @return class instance
+     * @param <T> class that extends JsonConvertible
      */
-    public static <T extends JsonConvertible> T convertToObject(String rawJsonString, T object) {
-        return convertToObject(Json.parseFromString(rawJsonString), object);
+    public static <T extends JsonConvertible> T convertToObject(Json json, T instance) {
+        return convertToObject(json, instance, instance.getClass(), false);
     }
 
     /**
-     * Convert json to Object
-     * @param json json
-     * @param object a class of object for example Test.class
-     * @return new Instance of given object
-     * @param <T> class that implements JsonConvertible
+     * main convert method
+     * @param json json to convert
+     * @param instance instance of the object
+     * @param clazz current class
+     * @param recurse for JsonObject annotations check
+     * @return class instance
+     * @param <T> class that extends JsonConvertible
      */
-    public static <T extends JsonConvertible> T convertToObject(Json json, Class<T> object) {
-        try {
-            return convertToObject(json, object.newInstance());
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
+    private static <T extends JsonConvertible> T convertToObject(Json json, T instance, Class<?> clazz, boolean recurse) {
+        // Check annotation and parse by keys if exist
+        JsonObject jsonObject = clazz.getAnnotation(JsonObject.class);
+        if (jsonObject != null && !recurse) {
+            boolean check = jsonObject.checkExist();
+            String[] keys = jsonObject.keyList();
+            Iterator<String> iterator = Arrays.stream(keys).iterator();
+            while (iterator.hasNext()) {
+                String key = iterator.next();
+                if (!key.isEmpty()) {
+                    if (!json.containsKey(key)) {
+                        if (check) {
+                            throw new RuntimeException("Key " + key + " doesn't exists in json.");
+                        }
+                    } else {
+                        convertToObject(json.getJson(key), instance, clazz, true);
+                        return instance;
+                    }
+                }
+            }
         }
-    }
+        setFields(json, instance, clazz.getDeclaredFields());
 
-    public static <T extends JsonConvertible> T convertToObject(Json json, T object) {
-        return convertToObject(json, object, false);
-    }
-
-    /**
-     * Convert json to Object
-     * @param json json
-     * @param object instance of the object
-     * @param recurse if method use for recursion
-     * @return object
-     * @param <T> class that implements JsonConvertible
-     */
-    private static <T extends JsonConvertible> T convertToObject(Json json, T object, boolean recurse) {
-        Class<?> clazz = object.getClass();
-        if (!Arrays.asList(clazz.getInterfaces()).contains(JsonConvertible.class)) {
-            throw new IllegalArgumentException("Object " + clazz.getName() + " doesn't implements JsonConvertible.class");
-        }
+        // Parse superclasses
         Class<?> superClass = clazz.getSuperclass();
-        List<Field> fields = new ArrayList<>();
-
-        SubJson subJson = object.getClass().getAnnotation(SubJson.class);
-        if (subJson != null && !recurse) {
-            String name = subJson.key();
-            boolean includeParent = subJson.includeParent();
-
-            if (!name.isEmpty() && json.containsKey(name) || !subJson.checkKeyExist()) {
-                Json jsonPart = json.getJson(name);
-                if (jsonPart == null) {
-                    throw new RuntimeException("Json object by key " + name + " doesn't exists.");
-                }
-                convertToObject(json.getJson(name), object, true);
-            } else {
-                convertToObject(json, object, true);
+        if (superClass != null) {
+            if (isConvertible(superClass)) {
+                convertToObject(json, instance, superClass, false);
             }
-            if (includeParent) {
-                while (superClass != null &&
-                        Arrays.asList(superClass.getInterfaces()).contains(JsonConvertible.class)) {
-                    fields.addAll(Arrays.asList(superClass.getDeclaredFields()));
-                    superClass = superClass.getSuperclass();
-                }
-            }
-        } else {
-            fields = Arrays.asList(clazz.getDeclaredFields());
         }
 
+        return instance;
+    }
+
+    /**
+     * set values to fields
+     * @param json json with values
+     * @param instance current class
+     * @param fields fields to set
+     * @param <T> class that extends JsonConvertible
+     */
+    private static <T extends JsonConvertible> void setFields(Json json, T instance, Field[] fields) {
         for (Field field : fields) {
             field.setAccessible(true);
             String fieldName = field.getName();
             Class<?> fieldType = field.getType();
-            boolean isConvertible = Arrays.asList(fieldType.getInterfaces()).contains(JsonConvertible.class);
-            boolean isList = fieldType == JsonList.class;
-            JsonValue jsonValue = field.getAnnotation(JsonValue.class);
-            if (jsonValue != null) {
-                fieldName = jsonValue.key();
+            boolean isConvertible = isConvertible(fieldType);
+            JsonField fieldData = field.getAnnotation(JsonField.class);
+            if (fieldData != null && !fieldData.key().isEmpty()) {
+                fieldName = fieldData.key();
+            }
+            if (!json.containsKey(fieldName)) {
+                continue;
             }
 
-            if (json.containsKey(fieldName)) {
-                Object value = json.get(fieldName);
-                if (jsonValue != null) {
-                    if (jsonValue.autoConvert() && jsonValue.dateFormat().isEmpty()) {
-                        if (value != null && fieldType != value.getClass()) {
-                            value = castTo(value, fieldType);
+            Object value = json.get(fieldName);
+            try {
+                if (isConvertible && value instanceof Json) {
+                    Object fieldInstance = field.get(instance);
+                    if (fieldInstance == null) {
+                        fieldInstance = fieldType.newInstance();
+                    }
+                    field.set(instance, convertToObject((Json) value, (JsonConvertible) fieldInstance));
+                    return;
+                }
+
+                boolean isCollection = Collection.class.isAssignableFrom(fieldType);
+                if ((isCollection || fieldType.isArray()) && value instanceof JsonList) {
+                    JsonList list = (JsonList) value;
+                    if (isCollection) {
+                        if (fieldType == JsonList.class) {
+                            if (fieldData != null) {
+                                Class<?> t = fieldData.type();
+                                if (t != JsonField.class) {
+                                    value = castJsonList(t, list);
+                                }
+                            }
+                        } else {
+                            value = castCollection((ParameterizedType) field.getGenericType(), list);
                         }
-                    } else if (value != null && fieldType == LocalDateTime.class && !jsonValue.dateFormat().isEmpty()) {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(jsonValue.dateFormat());
+                    } else {
+                        value = castArray(fieldType, list);
+                    }
+                }
+                else if (fieldData != null && value != null && fieldType == LocalDateTime.class) {
+                    if (fieldData.dateFormat().isEmpty()) {
+                        value = LocalDateTime.parse((CharSequence) value);
+                    } else {
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(fieldData.dateFormat());
                         value = LocalDateTime.parse((CharSequence) value, formatter);
                     }
                 }
-                try {
-                    if (isConvertible) {
-                        Object instance = field.get(object);
-                        if (instance == null) {
-                            instance = fieldType.newInstance();
-                            field.set(object, instance);
-                        }
-                        if (Json.isJson(json.getString(fieldName))) {
-                            convertToObject(json.getJson(fieldName), (JsonConvertible) instance);
-                            continue;
-                        }
-                    } else if (isList && jsonValue != null) {
-                        JsonList list = new JsonList();
-                        for (Json obj : json.getListWithJsons(fieldName)) {
-                            Class<?> objectType = jsonValue.type();
 
-                            if (jsonValue.types().length != 0 && jsonValue.types()[0] != JsonValue.class) { // checking object class
-                                for (Class<?> type : jsonValue.types()) {
-                                    try {
-                                        Method method = type.getDeclaredMethod("validateJson", Json.class);
-                                        method.setAccessible(true);
-                                        if ((boolean) method.invoke(type.newInstance(), obj)) {
-                                            objectType = type;
-                                        }
-                                    } catch (NoSuchMethodException | InvocationTargetException ignored) {
-                                    } // Method is optional
-                                }
-                            }
-
-                            if (!Arrays.asList(objectType.getInterfaces()).contains(JsonConvertible.class)) {
-                                throw new RuntimeException("Object " + objectType + " doesn't implements JsonConvertible interface");
-                            }
-                            list.add(convertToObject(obj, (JsonConvertible) objectType.newInstance()));
-                        }
-                        value = list;
-                    }
-                    field.set(object, value);
-                } catch (IllegalAccessException | InstantiationException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalArgumentException e) {
-                    throw new RuntimeException("Can not set " + fieldName +
-                            " to " + value + ". Possibly due to type incompatibility. " +
-                            "\nTry disabling type parsing in json or use auto-conversion via @JsonValue(key=\"" + fieldName + "\")." +
-                            "\nError message: " + e.getMessage() );
-                }
-            }
-        }
-
-        return object;
-    }
-
-    /**
-     * parse object to json
-     * @param object object to parse
-     * @return parsed json
-     */
-    public static Json convertToJson(JsonConvertible object) {
-        if (object == null) {
-            return null;
-        }
-        Class<?> clazz = object.getClass();
-        if (!Arrays.asList(clazz.getInterfaces()).contains(JsonConvertible.class)) {
-            throw new IllegalArgumentException("Object doesn't implements JsonConvertible.class");
-        }
-        Field[] fields = clazz.getDeclaredFields();
-        Json json = new Json();
-
-        for (Field field : fields) {
-            field.setAccessible(true);
-            JsonValue jsonValue = field.getAnnotation(JsonValue.class);
-            String fieldName = jsonValue == null ? field.getName() : jsonValue.key();
-            Class<?> fieldType = field.getType();
-            boolean isList = fieldType == JsonList.class;
-            boolean isConvertible = Arrays.asList(fieldType.getInterfaces()).contains(JsonConvertible.class);
-            try {
-                Object value = field.get(object);
-                if (isConvertible) {
-                    value = convertToJson((JsonConvertible) value);
-                }
-                if (isList && value != null) {
-                    JsonList list = new JsonList();
-                    for (Object obj : (JsonList) value) {
-                        if (Arrays.asList(obj.getClass().getInterfaces()).contains(JsonConvertible.class)) {
-                            list.add(convertToJson((JsonConvertible) obj));
-                        } else {
-                            list.add(obj);
-                        }
-                    }
-                    value = list;
-                 }
-                if (jsonValue != null && !isList) {
-                    if (value == null && jsonValue.skipNull()) {
-                        continue;
-                    }
-                    if (jsonValue.type() != fieldType) {
-                        value = castTo(value, jsonValue.type());
-                    }
-                }
-                json.add(fieldName, value);
-            } catch (IllegalAccessException e) {
+                field.set(instance, value);
+            } catch (IllegalAccessException | InstantiationException e) {
                 throw new RuntimeException(e);
             }
         }
-        return json;
     }
 
     /**
-     * Method for cast object to given type if it meets the conditions
-     * @param object object to cast
-     * @param type type
-     * @return an object reduced to the type
+     * cast json list to type
+     * @param type type to cast
+     * @param list list to cast
+     * @return jsonlist with values cast to type
      */
-    private static Object castTo(Object object, Class<?> type) {
+    private static JsonList castJsonList(Class<?> type, JsonList list) {
+        if (isConvertible(type)) {
+            JsonList newList = new JsonList();
+            for (Object obj : list) {
+                newList.add(convertToObject((Json) obj, type.asSubclass(JsonConvertible.class)));
+            }
+            return newList;
+        }
+        return null;
+    }
+
+    /**
+     * cast list to type
+     * @param type type to cast
+     * @param list list to cast
+     * @return list with values cast to type
+     */
+    private static Collection<?> castCollection(ParameterizedType type, JsonList list) {
+        Class<?> collectionType = (Class<?>) type.getActualTypeArguments()[0];
+        if (isConvertible(collectionType)) {
+            JsonList newList = new JsonList();
+            for (Object jsonObject : list) {
+                newList.add(convertToObject((Json) jsonObject, collectionType.asSubclass(JsonConvertible.class)));
+            }
+            return newList.getListOfType(collectionType);
+        }
+        return list;
+    }
+
+    /**
+     * cast array list to type
+     * @param type type to cast
+     * @param list list to cast
+     * @return array with values cast to type
+     */
+    private static Object[] castArray(Class<?> type, JsonList list) {
+        Class<?> arrayType = type.getComponentType();
+        if (isConvertible(arrayType)) {
+            JsonList newList = new JsonList();
+            for (Object jsonObject : list) {
+                newList.add(convertToObject((Json) jsonObject, arrayType.asSubclass(JsonConvertible.class)));
+            }
+            Object[] newArray = (Object[]) Array.newInstance(arrayType, newList.size());
+            System.arraycopy(newList.toArray(), 0, newArray, 0, newList.size());
+            return newArray;
+        }
+        return null;
+    }
+
+    /**
+     * check if class can be converted to json
+     * @param clazz class to check
+     * @return true if can
+     */
+    private static boolean isConvertible(Class<?> clazz) {
+        return Arrays.asList(clazz.getInterfaces()).contains(JsonConvertible.class);
+    }
+
+    /**
+     * cast object to type
+     * @param object object to cast
+     * @param type type for cast
+     * @return cast object
+     */
+    public static Object castTo(Object object, Class<?> type) {
         if (object == null) {
             return null;
         }
 
         String value = object.toString();
-        if (type == byte.class || type == Byte.class) {
-            object = Byte.parseByte(value);
-        } else if (type == short.class || type == Short.class) {
-            object = Short.parseShort(value);
-        } else if (type == int.class || type == Integer.class) {
-            object = Integer.parseInt(value);
-        } else if (type == long.class || type == Long.class) {
-            object = Long.parseLong(value);
-        } else if (type == float.class || type == Float.class) {
-            object = Float.parseFloat(value);
-        } else if (type == double.class || type == Double.class) {
-            object = Double.parseDouble(value);
-        } else if (type == boolean.class || type == Boolean.class) {
-            object = Boolean.parseBoolean(value);
-        } else if (type == String.class) {
-            object = value;
+        try {
+            if (type == byte.class || type == Byte.class) {
+                object = Byte.parseByte(value);
+            } else if (type == short.class || type == Short.class) {
+                object = Short.parseShort(value);
+            } else if (type == int.class || type == Integer.class) {
+                object = Integer.parseInt(value);
+            } else if (type == long.class || type == Long.class) {
+                object = Long.parseLong(value);
+            } else if (type == float.class || type == Float.class) {
+                object = Float.parseFloat(value);
+            } else if (type == double.class || type == Double.class) {
+                object = Double.parseDouble(value);
+            } else if (type == boolean.class || type == Boolean.class) {
+                object = Boolean.parseBoolean(value);
+            } else if (type == String.class) {
+                object = value;
+            } else if (type == char.class || type == Character.class) {
+                if (value.length() > 1) {
+                    object = value.charAt(0);
+                }
+            } else {
+                object = castObject(object, type);
+            }
+        } catch (NumberFormatException e) {
+            throw new RuntimeException(e);
         }
+
         return object;
+    }
+
+    /**
+     * default cast
+     * @param object object to cast
+     * @param type type to cast
+     * @return cast object
+     */
+    private static Object castObject(Object object, Class<?> type) {
+        try {
+            return type.cast(object);
+        } catch (ClassCastException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
