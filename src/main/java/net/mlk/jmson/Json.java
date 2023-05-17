@@ -1,10 +1,8 @@
 package net.mlk.jmson;
 
-import com.sun.istack.internal.NotNull;
 import net.mlk.jmson.utils.JsonConverter;
-import net.mlk.jmson.utils.JsonConvertible;
+
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     private boolean parseTypes = true;
@@ -41,6 +39,16 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     public Json(String rawJsonString, boolean parseTypes) {
         this.parseTypes = parseTypes;
         this.parser(this.validateString(Objects.requireNonNull(rawJsonString)));
+    }
+
+    /**
+     * @return copied json
+     */
+    public Json copy() {
+        Json json = new Json();
+        json.putAll(this);
+        json.parseTypes(this.parseTypes);
+        return json;
     }
 
     /**
@@ -140,7 +148,15 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
      * @return JsonList
      */
     public JsonList getList(String key) {
-        return (JsonList) this.get(key);
+        Object obj = this.get(key);
+        if (obj == null) {
+            return null;
+        } else if (!(obj instanceof JsonList) && JsonList.isList(obj.toString())) {
+            return new JsonList(obj.toString());
+        } else if (!(obj instanceof JsonList)) {
+            return null;
+        }
+        return (JsonList) obj;
     }
 
     /**
@@ -148,7 +164,15 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
      * @return Json
      */
     public Json getJson(String key) {
-        return (Json) this.get(key);
+        Object obj = this.get(key);
+        if (obj == null) {
+            return null;
+        } else if (!(obj instanceof Json) && Json.isJson(obj.toString())) {
+            return new Json(obj.toString());
+        } else if (!(obj instanceof Json)) {
+            return null;
+        }
+        return (Json) obj;
     }
 
     /**
@@ -177,14 +201,6 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
             }
         }
         return result;
-    }
-
-    /**
-     * Method to put json values into object by name
-     * @param object object to put
-     */
-    public <T extends JsonConvertible> T convertToObject(T object) {
-        return JsonConverter.convertToObject(this, object);
     }
 
     /**
@@ -218,7 +234,7 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                 builder.append("\"").append(key).append("\":\"").append(obj).append("\"");
             }
             if (iterator.hasNext()) {
-                builder.append(",");
+                builder.append(", ");
             }
         }
         return builder.append("}").toString();
@@ -240,12 +256,12 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
             object = false;
         } else if (value.matches("[+-]?[0-9]+")) {
             try {
-                object = Integer.parseInt(value);
+                object = JsonConverter.castTo(value, Integer.class);
             } catch (NumberFormatException ex) {
-                object = Long.parseLong(value);
+                object = JsonConverter.castTo(value, Long.class);
             }
         } else if (value.matches("[+-]?[0-9]*\\.[0-9]+")) {
-            object = Double.parseDouble(value);
+            object = JsonConverter.castTo(value, Double.class);
         } else if (value.equals("null")) {
             object = null;
         }
@@ -281,6 +297,7 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
         }
 
         int level = 0;
+        int quoteLevel = 0;
         int stringLength = rawJsonString.length();
         StringBuilder block = new StringBuilder();
         for (int i = 0; i < stringLength; i++) {
@@ -292,16 +309,23 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                 String value = null;
                 boolean isQuoted = true;
                 i += 1;
+                quoteLevel += 1;
                 for ( ; i <= stringLength; i++) {
                     currentChar = i == stringLength ? '\0' : rawJsonString.charAt(i);
                     prevChar = rawJsonString.charAt(i - 1);
-                    level += currentChar == '{' || currentChar == '[' ? 1 :
-                            currentChar == '}' || currentChar == ']' ? -1 : 0;
-                    if (level == 0 && currentChar == '\"' && prevChar != '\\') {
+                    level += !isQuoted && (currentChar == '{' || currentChar == '[') ? 1 :
+                            !isQuoted && (currentChar == '}' || currentChar == ']') ? -1 : 0;
+                    if (!isQuoted && quoteLevel != 0 && currentChar == ',' || quoteLevel != 0 && i == stringLength) {
+                        throw new RuntimeException("Expected value, but it is not, at: " + i);
+                    } else if (!isQuoted && currentChar == ',' && level != 0) {
+                        throw new RuntimeException("Invalid structure at: " + i);
+                    } else if (level == 0 && currentChar == '\"' && prevChar != '\\') {
                         isQuoted = !isQuoted;
+                        quoteLevel += isQuoted ? 1 : -1;
                         continue;
-                    } else if ((!isQuoted && currentChar == ',' && level == 0) || i == stringLength) {
+                    } else if (!isQuoted && currentChar == ',' || i == stringLength) {
                         value = block.toString().trim();
+                        System.out.println(value);
                         block.setLength(0);
                         break;
                     } else if (!isQuoted && currentChar == ':' && level == 0) {
@@ -312,11 +336,11 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                     block.append(currentChar);
                 }
                 if (key == null || value == null) {
-                    continue;
+                    throw new RuntimeException("Invalid key-value structure, at: " + i);
                 }
-                if (isJson(value)) {
+                if (isJson(value) && prevChar != '\"') {
                     super.put(key, new Json(value, this.parseTypes));
-                } else if (JsonList.isList(value)) {
+                } else if (JsonList.isList(value) && prevChar != '\"') {
                     super.put(key, new JsonList(value, this.parseTypes));
                 } else {
                     if (this.parseTypes && prevChar != '\"') {

@@ -1,7 +1,8 @@
 package net.mlk.jmson;
 
+import net.mlk.jmson.utils.JsonConverter;
+
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class JsonList extends ArrayList<Object> implements JsonObject {
     private boolean parseTypes = true;
@@ -38,6 +39,16 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     public JsonList(String rawListString, boolean parseTypes) {
         this(rawListString);
         this.parseTypes = parseTypes;
+    }
+
+    /**
+     * @return copied json
+     */
+    public JsonList copy() {
+        JsonList json = new JsonList();
+        json.addAll(this);
+        json.parseTypes(this.parseTypes);
+        return json;
     }
 
     /**
@@ -140,7 +151,15 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
      * @return JsonList
      */
     public JsonList getList(int index) {
-        return (JsonList) super.get(index);
+        Object obj = this.get(index);
+        if (obj == null) {
+            return null;
+        } else if (!(obj instanceof JsonList) && JsonList.isList(obj.toString())) {
+            return new JsonList(obj.toString());
+        } else if (!(obj instanceof JsonList)) {
+            return null;
+        }
+        return (JsonList) obj;
     }
 
     /**
@@ -148,7 +167,15 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
      * @return Json
      */
     public Json getJson(int index) {
-        return (Json) super.get(index);
+        Object obj = this.get(index);
+        if (obj == null) {
+            return null;
+        } else if (!(obj instanceof Json) && Json.isJson(obj.toString())) {
+            return new Json(obj.toString());
+        } else if (!(obj instanceof Json)) {
+            return null;
+        }
+        return (Json) obj;
     }
 
     /**
@@ -192,12 +219,18 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         return result;
     }
 
+    /**
+     * @param object class to cast
+     * @return T list
+     * @param <T> param to cast
+     */
+    @SuppressWarnings("unchecked")
     public <T> List<T> getListOfType(Class<T> object) {
         List<T> result = new ArrayList<>();
         for (Object obj : this) {
-            if (object.isInstance(obj)) {
-                result.add(object.cast(obj));
-            }
+            try {
+                result.add((T) JsonConverter.castTo(obj, object));
+            } catch (Exception ignored) { } // ignore if can't parse
         }
         return result;
     }
@@ -225,13 +258,13 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         Iterator<Object> iterator = super.iterator();
         while (iterator.hasNext()) {
             Object obj = iterator.next();
-            if (!(obj instanceof String)) {
+            if (!(obj instanceof String) && this.parseTypes) {
                 builder.append(obj);
             } else {
                 builder.append("\"").append(obj).append("\"");
             }
             if (iterator.hasNext()) {
-                builder.append(",");
+                builder.append(", ");
             }
         }
         return builder.append("]").toString();
@@ -266,10 +299,12 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         }
 
         int level = 0;
+        int quoteLevel = 0;
         int stringLength = rawListString.length();
         StringBuilder block = new StringBuilder();
         for (int i = 0; i <= stringLength; i++) {
             char currentChar = i == stringLength ? '\0' : rawListString.charAt(i);
+            char prevchar = i == 0 ? '\0' : rawListString.charAt(i - 1);
 
             level += currentChar == '{' || currentChar == '[' ? 1 :
                     currentChar == '}' || currentChar == ']' ? -1 : 0;
@@ -285,6 +320,10 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
                     if (value.startsWith("\"") && value.endsWith("\"")) {
                         value = value.substring(1, value.length() - 1);
                         quoted = true;
+                    } else if (value.startsWith("\"") && !value.endsWith("\"") || level < 0) {
+                        throw new RuntimeException("Invalid value at: " + i);
+                    } else if (level != 0) {
+                        throw new RuntimeException("Invalid structure at: " + i);
                     }
                     if (this.parseTypes && !quoted) {
                         super.add(Json.parseToType(value));
