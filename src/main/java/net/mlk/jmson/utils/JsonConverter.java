@@ -8,8 +8,10 @@ import net.mlk.jmson.annotations.JsonField;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -18,10 +20,10 @@ public class JsonConverter {
 
     /**
      * convert json to object & create new instance
-     * @param json json to convert
+     * @param json  json to convert
      * @param clazz class to create object
+     * @param <T>   class  that extends JsonConvertible
      * @return new class instance
-     * @param <T> class  that extends JsonConvertible
      */
     public static <T extends JsonConvertible> T convertToObject(Json json, Class<T> clazz) {
         try {
@@ -33,9 +35,10 @@ public class JsonConverter {
 
     /**
      * convert json to object
+     *
      * @param json json to convert
+     * @param <T>  class that extends JsonConvertible
      * @return class instance
-     * @param <T> class that extends JsonConvertible
      */
     public static <T extends JsonConvertible> T convertToObject(Json json, T instance) {
         return convertToObject(json, instance, instance.getClass(), false);
@@ -43,12 +46,13 @@ public class JsonConverter {
 
     /**
      * main convert method
-     * @param json json to convert
+     *
+     * @param json     json to convert
      * @param instance instance of the object
-     * @param clazz current class
-     * @param recurse for JsonObject annotations check
+     * @param clazz    current class
+     * @param recurse  for JsonObject annotations check
+     * @param <T>      class that extends JsonConvertible
      * @return class instance
-     * @param <T> class that extends JsonConvertible
      */
     private static <T extends JsonConvertible> T convertToObject(Json json, T instance, Class<?> clazz, boolean recurse) {
         // Check annotation and parse by keys if exist
@@ -86,10 +90,10 @@ public class JsonConverter {
 
     /**
      * set values to fields
-     * @param json json with values
+     * @param json     json with values
      * @param instance current class
-     * @param fields fields to set
-     * @param <T> class that extends JsonConvertible
+     * @param fields   fields to set
+     * @param <T>      class that extends JsonConvertible
      */
     private static <T extends JsonConvertible> void setFields(Json json, T instance, Field[] fields) {
         for (Field field : fields) {
@@ -133,8 +137,7 @@ public class JsonConverter {
                     } else {
                         value = castArray(fieldType, list);
                     }
-                }
-                else if (fieldData != null && value != null && fieldType == LocalDateTime.class) {
+                } else if (fieldData != null && value != null && fieldType == LocalDateTime.class) {
                     if (fieldData.dateFormat().isEmpty()) {
                         value = LocalDateTime.parse((CharSequence) value);
                     } else {
@@ -151,6 +154,92 @@ public class JsonConverter {
     }
 
     /**
+     * convert object to json
+     * @param object instance of object to convert
+     * @return json
+     * @param <T> object must extends JsonConvertible
+     */
+    public static <T extends JsonConvertible> Json convertToJson(T object) {
+        Json json = getFields(object.getClass().getDeclaredFields(), object.getClass(), object);
+        Class<?> clazz = object.getClass();
+        Class<?> superClass = clazz.getSuperclass();
+        while (superClass != null && isConvertible(superClass)) {
+            json.putAll(getFields(superClass.getDeclaredFields(), superClass, object));
+            superClass = superClass.getSuperclass();
+        }
+        return json;
+    }
+
+    /**
+     * get values from fields
+     * @param fields fields to set
+     * @param clazz current class
+     * @param object instance
+     * @param <T> class that extends JsonConvertible
+     */
+    private static <T extends JsonConvertible> Json getFields(Field[] fields, Class<?> clazz, T object) {
+        Json json = new Json();
+        JsonObject jsonObject = clazz.getAnnotation(JsonObject.class);
+
+        for (Field field : fields) {
+            try {
+                JsonField fieldData = field.getAnnotation(JsonField.class);
+                boolean ignoreNull = jsonObject != null && jsonObject.ignoreNull();
+                Class<?> fieldType = field.getType();
+                String fieldName = field.getName();
+                Object value = field.get(object);
+                if (fieldData != null) {
+                    fieldName = fieldData.key().isEmpty() ? fieldName : fieldData.key();
+                    ignoreNull = fieldData.ignoreNull();
+
+                    if (fieldData.type() == String.class && value == null) {
+                        value = "null";
+                    }
+                }
+
+                if (value != null && (value.getClass().isArray() || Collection.class.isAssignableFrom(value.getClass()))) {
+                    if (value.getClass().isArray()) {
+                        value = new ArrayList<>(Arrays.asList((Object[]) value));
+                        fieldType = fieldType.getComponentType();
+                    } else {
+                        if (!(value instanceof JsonList)) {
+                            Type type = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+                            fieldType = (Class<?>) type;
+                        }
+                    }
+                    if (value instanceof JsonList) {
+                        JsonList values = (JsonList) value;
+                        JsonList objects = new JsonList();
+                        for (Object o : values) {
+                            if (!isConvertible(o.getClass())) {
+                                objects.add(o);
+                            } else {
+                                objects.add(convertToJson((JsonConvertible) o));
+                            }
+                        }
+                        value = objects;
+                    } else if (isConvertible(fieldType)) {
+                        ArrayList<?> values = (ArrayList<?>) value;
+                        ArrayList<Object> objects = new ArrayList<>();
+                        for (Object o : values) {
+                            objects.add(convertToJson((JsonConvertible) o));
+                        }
+                        value = objects;
+                    }
+                }
+
+                if (value != null || !ignoreNull) {
+                    json.put(fieldName, value);
+                }
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return json;
+    }
+
+
+    /**
      * cast json list to type
      * @param type type to cast
      * @param list list to cast
@@ -164,7 +253,7 @@ public class JsonConverter {
             }
             return newList;
         }
-        return null;
+        return list;
     }
 
     /**
@@ -193,16 +282,22 @@ public class JsonConverter {
      */
     private static Object[] castArray(Class<?> type, JsonList list) {
         Class<?> arrayType = type.getComponentType();
+        JsonList newList = new JsonList();
         if (isConvertible(arrayType)) {
-            JsonList newList = new JsonList();
             for (Object jsonObject : list) {
                 newList.add(convertToObject((Json) jsonObject, arrayType.asSubclass(JsonConvertible.class)));
             }
-            Object[] newArray = (Object[]) Array.newInstance(arrayType, newList.size());
-            System.arraycopy(newList.toArray(), 0, newArray, 0, newList.size());
-            return newArray;
+        } else {
+            for (Object jsonObject : list) {
+                if (jsonObject instanceof Json || jsonObject instanceof JsonList) {
+                    jsonObject = jsonObject.toString();
+                }
+                newList.add(arrayType.cast(jsonObject));
+            }
         }
-        return null;
+        Object[] newArray = (Object[]) Array.newInstance(arrayType, newList.size());
+        System.arraycopy(newList.toArray(), 0, newArray, 0, newList.size());
+        return newArray;
     }
 
     /**
