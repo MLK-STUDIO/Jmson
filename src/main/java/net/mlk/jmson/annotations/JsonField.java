@@ -10,5 +10,6 @@ import java.lang.annotation.Target;
 public @interface JsonField {
     String key() default "";
     String dateFormat() default "";
+    boolean ignoreNull() default false;
     Class<?> type() default JsonField.class;
 }
