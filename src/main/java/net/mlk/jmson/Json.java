@@ -325,7 +325,6 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                         continue;
                     } else if (!isQuoted && currentChar == ',' || i == stringLength) {
                         value = block.toString().trim();
-                        System.out.println(value);
                         block.setLength(0);
                         break;
                     } else if (!isQuoted && currentChar == ':' && level == 0) {
