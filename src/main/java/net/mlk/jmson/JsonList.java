@@ -258,7 +258,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         Iterator<Object> iterator = super.iterator();
         while (iterator.hasNext()) {
             Object obj = iterator.next();
-            if (!(obj instanceof String) && this.parseTypes) {
+            if ((!(obj instanceof String) && this.parseTypes) || obj instanceof JsonObject) {
                 builder.append(obj);
             } else {
                 builder.append("\"").append(obj).append("\"");
@@ -299,12 +299,10 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         }
 
         int level = 0;
-        int quoteLevel = 0;
         int stringLength = rawListString.length();
         StringBuilder block = new StringBuilder();
         for (int i = 0; i <= stringLength; i++) {
             char currentChar = i == stringLength ? '\0' : rawListString.charAt(i);
-            char prevchar = i == 0 ? '\0' : rawListString.charAt(i - 1);
 
             level += currentChar == '{' || currentChar == '[' ? 1 :
                     currentChar == '}' || currentChar == ']' ? -1 : 0;

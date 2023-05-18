@@ -228,7 +228,7 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
             Map.Entry<String, Object> entry = iterator.next();
             String key = entry.getKey();
             Object obj = entry.getValue();
-            if (!(obj instanceof String)) {
+            if ((!(obj instanceof String) && this.parseTypes) || obj instanceof JsonObject) {
                 builder.append("\"").append(key).append("\":").append(obj);
             } else {
                 builder.append("\"").append(key).append("\":\"").append(obj).append("\"");
