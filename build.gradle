@@ -4,3 +4,7 @@ plugins {
 
 group = "net.mlk.jmson"
 version = "1.0"
+
+jar {
+    exclude("test")
+}
