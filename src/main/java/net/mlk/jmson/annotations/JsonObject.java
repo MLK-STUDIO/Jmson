@@ -10,5 +10,6 @@ import java.lang.annotation.Target;
 public @interface JsonObject {
     String key() default "";
     String[] keyList() default "";
+    boolean ignoreNull() default false;
     boolean checkExist() default true;
 }
