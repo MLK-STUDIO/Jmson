@@ -8,10 +8,7 @@ import net.mlk.jmson.annotations.JsonField;
 import java.lang.reflect.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.*;
 
 public class JsonConverter {
 
@@ -56,10 +53,11 @@ public class JsonConverter {
         JsonObject jsonObject = clazz.getAnnotation(JsonObject.class);
         if (jsonObject != null && !recurse) {
             boolean check = jsonObject.checkExist();
-            String[] keys = jsonObject.keyList();
-            Iterator<String> iterator = Arrays.stream(keys).iterator();
-            while (iterator.hasNext()) {
-                String key = iterator.next();
+            List<String> keys = new ArrayList<>(Arrays.asList(jsonObject.keyList()));
+            if (!jsonObject.key().isEmpty()) {
+                keys.add(jsonObject.key());
+            }
+            for (String key : keys) {
                 if (!key.isEmpty()) {
                     if (!json.containsKey(key)) {
                         if (check) {
@@ -355,34 +353,29 @@ public class JsonConverter {
         }
 
         String value = object.toString();
-        try {
-            if (type == byte.class || type == Byte.class) {
-                object = Byte.parseByte(value);
-            } else if (type == short.class || type == Short.class) {
-                object = Short.parseShort(value);
-            } else if (type == int.class || type == Integer.class) {
-                object = Integer.parseInt(value);
-            } else if (type == long.class || type == Long.class) {
-                object = Long.parseLong(value);
-            } else if (type == float.class || type == Float.class) {
-                object = Float.parseFloat(value);
-            } else if (type == double.class || type == Double.class) {
-                object = Double.parseDouble(value);
-            } else if (type == boolean.class || type == Boolean.class) {
-                object = Boolean.parseBoolean(value);
-            } else if (type == String.class) {
-                object = value;
-            } else if (type == char.class || type == Character.class) {
-                if (value.length() > 1) {
-                    object = value.charAt(0);
-                }
-            } else {
-                object = castObject(object, type);
+        if (type == byte.class || type == Byte.class) {
+            object = Byte.parseByte(value);
+        } else if (type == short.class || type == Short.class) {
+            object = Short.parseShort(value);
+        } else if (type == int.class || type == Integer.class) {
+            object = Integer.parseInt(value);
+        } else if (type == long.class || type == Long.class) {
+            object = Long.parseLong(value);
+        } else if (type == float.class || type == Float.class) {
+            object = Float.parseFloat(value);
+        } else if (type == double.class || type == Double.class) {
+            object = Double.parseDouble(value);
+        } else if (type == boolean.class || type == Boolean.class) {
+            object = Boolean.parseBoolean(value);
+        } else if (type == String.class) {
+            object = value;
+        } else if (type == char.class || type == Character.class) {
+            if (value.length() > 1) {
+                object = value.charAt(0);
             }
-        } catch (NumberFormatException e) {
-            throw new RuntimeException(e);
+        } else {
+            object = castObject(object, type);
         }
-
         return object;
     }
 

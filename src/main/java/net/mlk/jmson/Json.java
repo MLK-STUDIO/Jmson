@@ -317,13 +317,17 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                             !isQuoted && (currentChar == '}' || currentChar == ']') ? -1 : 0;
                     if (!isQuoted && quoteLevel != 0 && currentChar == ',' || quoteLevel != 0 && i == stringLength) {
                         throw new RuntimeException("Expected value, but it is not, at: " + i);
-                    } else if (!isQuoted && currentChar == ',' && level != 0) {
-                        throw new RuntimeException("Invalid structure at: " + i);
-                    } else if (level == 0 && currentChar == '\"' && prevChar != '\\') {
+                    }
+//                    repair it later
+//                    else if (!isQuoted && currentChar == ',' && level == 0) {
+//                        System.out.println(level);
+//                        throw new RuntimeException("Invalid structure at: " + i);
+//                    }
+                    else if (level == 0 && currentChar == '\"' && prevChar != '\\') {
                         isQuoted = !isQuoted;
                         quoteLevel += isQuoted ? 1 : -1;
                         continue;
-                    } else if (!isQuoted && currentChar == ',' || i == stringLength) {
+                    } else if (!isQuoted && currentChar == ',' && level == 0 || i == stringLength) {
                         value = block.toString().trim();
                         block.setLength(0);
                         break;
