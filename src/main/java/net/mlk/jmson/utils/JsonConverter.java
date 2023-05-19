@@ -168,6 +168,12 @@ public class JsonConverter {
                     }
                 }
 
+                if (value != null && fieldData != null && fieldData.type() != JsonField.class) {
+                    if (fieldData.type() != value.getClass()) {
+                        value = castTo(value, fieldData.type());
+                    }
+                }
+
                 field.set(instance, value);
             } catch (IllegalAccessException | InstantiationException e) {
                 throw new RuntimeException(e);
