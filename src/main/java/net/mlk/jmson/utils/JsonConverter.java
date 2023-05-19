@@ -5,10 +5,7 @@ import net.mlk.jmson.JsonList;
 import net.mlk.jmson.annotations.JsonObject;
 import net.mlk.jmson.annotations.JsonField;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -123,19 +120,46 @@ public class JsonConverter {
                 boolean isCollection = Collection.class.isAssignableFrom(fieldType);
                 if ((isCollection || fieldType.isArray()) && value instanceof JsonList) {
                     JsonList list = (JsonList) value;
-                    if (isCollection) {
-                        if (fieldType == JsonList.class) {
-                            if (fieldData != null) {
-                                Class<?> t = fieldData.type();
-                                if (t != JsonField.class) {
-                                    value = castJsonList(t, list);
+                    Class<?> t = JsonField.class;
+                    if (fieldData != null) {
+                        t = fieldData.type();
+                    }
+                    if (fieldData != null && fieldData.types()[0] != JsonField.class) {
+                        for (int i = 0; i < list.size(); i++) {
+                            Object obj = list.get(i);
+                            if (obj instanceof Json) {
+                                for (Class<?> type : fieldData.types()) {
+                                    try {
+                                        if (!isConvertible(type)) {
+                                            continue;
+                                        }
+                                        Method method = type.getDeclaredMethod("validateJson", Json.class);
+                                        if ((boolean) method.invoke(instance, (Json) obj)) {
+                                            list.set(i, convertToObject((Json) json, type.asSubclass(JsonConvertible.class)));
+                                        }
+                                    } catch (Exception ignored) {} //ignore because method is optional
                                 }
                             }
+                        }
+                    }
+                    if (isCollection) {
+                        if (fieldType == JsonList.class) {
+                            if (t != JsonField.class) {
+                                value = castJsonList(t, list);
+                            }
                         } else {
-                            value = castCollection((ParameterizedType) field.getGenericType(), list);
+                            if (t == JsonField.class) {
+                                value = castCollection((ParameterizedType) field.getGenericType(), list);
+                            } else {
+                                value = castCollection(t, list);
+                            }
                         }
                     } else {
-                        value = castArray(fieldType, list);
+                        if (t == JsonField.class) {
+                            value = castArray(fieldType, list);
+                        } else {
+                            value = castArray(t, list);
+                        }
                     }
                 } else if (fieldData != null && value != null && fieldType == LocalDateTime.class) {
                     if (fieldData.dateFormat().isEmpty()) {
@@ -264,12 +288,22 @@ public class JsonConverter {
      */
     private static Collection<?> castCollection(ParameterizedType type, JsonList list) {
         Class<?> collectionType = (Class<?>) type.getActualTypeArguments()[0];
-        if (isConvertible(collectionType)) {
+        return castCollection(collectionType, list);
+    }
+
+    /**
+     * cast list to type
+     * @param type type to cast
+     * @param list list to cast
+     * @return list with values cast to type
+     */
+    private static Collection<?> castCollection(Class<?> type, JsonList list) {
+        if (isConvertible(type)) {
             JsonList newList = new JsonList();
             for (Object jsonObject : list) {
-                newList.add(convertToObject((Json) jsonObject, collectionType.asSubclass(JsonConvertible.class)));
+                newList.add(convertToObject((Json) jsonObject, type.asSubclass(JsonConvertible.class)));
             }
-            return newList.getListOfType(collectionType);
+            return newList.getListOfType(type);
         }
         return list;
     }

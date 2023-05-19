@@ -12,4 +12,5 @@ public @interface JsonField {
     String dateFormat() default "";
     boolean ignoreNull() default false;
     Class<?> type() default JsonField.class;
+    Class<?>[] types() default JsonField.class;
 }
