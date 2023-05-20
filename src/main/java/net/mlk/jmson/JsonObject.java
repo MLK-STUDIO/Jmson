@@ -1,7 +1,7 @@
 package net.mlk.jmson;
 
 /**
- * interface indicating that is Jmson Object
+ * interface for jmson objects
  */
 public interface JsonObject {
 }

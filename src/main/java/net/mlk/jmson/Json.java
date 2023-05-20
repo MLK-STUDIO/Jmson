@@ -4,41 +4,22 @@ import net.mlk.jmson.utils.JsonConverter;
 
 import java.util.*;
 
+/**
+ * main json class
+ */
 public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     private boolean parseTypes = true;
 
-    /**
-     * Default json object
-     */
     public Json() {
-
     }
 
-    /**
-     * Default json object with parseTypes
-     * @param parseTypes if you want to parseTypes
-     */
-    public Json(boolean parseTypes) {
+    public Json(String rawJson) {
+        this(rawJson, true);
+    }
+
+    public Json(String rawJson, boolean parseTypes) {
         this.parseTypes = parseTypes;
-    }
-
-    /**
-     * Json object parsed from string
-     * type parsing is true by default
-     * @param rawJsonString string to parse
-     */
-    public Json(String rawJsonString) {
-        this.parser(this.validateString(Objects.requireNonNull(rawJsonString)));
-    }
-
-    /**
-     * Json object parsed from string where you can specify if you don't want parse types
-     * @param rawJsonString string to parse
-     * @param parseTypes type parsing in json: with true - 1. With false - "1"
-     */
-    public Json(String rawJsonString, boolean parseTypes) {
-        this.parseTypes = parseTypes;
-        this.parser(this.validateString(Objects.requireNonNull(rawJsonString)));
+        this.parseFromString(rawJson);
     }
 
     /**
@@ -52,19 +33,20 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     }
 
     /**
-     * Custom method for put values
-     * @param key key of the value
+     * custom method to add values and
+     * get instance of current object
+     * @param key key
      * @param value value to put
-     * @return current Json
+     * @return this
      */
-    public Json add(String key, Object value) {
+    public Json append(String key, Object value) {
         super.put(key, value);
         return this;
     }
 
     /**
      * @param key key of the value
-     * @return string
+     * @return string if exists
      */
     public String getString(String key) {
         return String.valueOf(super.get(key));
@@ -76,12 +58,13 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
      */
     public char getCharacter(String key) {
         String value = this.getString(key);
-        return value.charAt(0);
+        return value == null ? '\0' : value.charAt(0);
     }
 
     /**
      * @param key key of the value
      * @return byte
+     * @throws IllegalStateException if not exists
      */
     public byte getByte(String key) {
         return (byte) this.getShort(key);
@@ -90,14 +73,17 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     /**
      * @param key key of the value
      * @return short
+     * @throws IllegalStateException if not exists
      */
     public short getShort(String key) {
         return (short) this.getInteger(key);
     }
 
+
     /**
      * @param key key of the value
      * @return int
+     * @throws IllegalStateException if not exists
      */
     public int getInteger(String key) {
         return (int) this.getLong(key);
@@ -106,11 +92,12 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     /**
      * @param key key of the value
      * @return long
+     * @throws IllegalStateException if not exists
      */
     public long getLong(String key) {
         String value = this.getString(key);
         if (value == null) {
-            return 0;
+            throw new IllegalStateException("Element " + key + " doesn't exists in json.");
         }
         return Long.parseLong(value);
     }
@@ -118,19 +105,22 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     /**
      * @param key key of the value
      * @return float
+     * @throws IllegalStateException if not exists
      */
     public float getFloat(String key) {
         return (float) this.getDouble(key);
     }
 
+
     /**
      * @param key key of the value
      * @return double
+     * @throws IllegalStateException if not exists
      */
     public double getDouble(String key) {
         String value = this.getString(key);
         if (value == null) {
-            return 0;
+            throw new IllegalStateException("Element " + key + " doesn't exists in json.");
         }
         return Double.parseDouble(value);
     }
@@ -151,8 +141,10 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
         Object obj = this.get(key);
         if (obj == null) {
             return null;
-        } else if (!(obj instanceof JsonList) && JsonList.isList(obj.toString())) {
-            return new JsonList(obj.toString());
+        }
+        String value = obj.toString();
+        if (!(obj instanceof JsonList) && JsonList.isList(value)) {
+            return new JsonList(value);
         } else if (!(obj instanceof JsonList)) {
             return null;
         }
@@ -167,8 +159,11 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
         Object obj = this.get(key);
         if (obj == null) {
             return null;
-        } else if (!(obj instanceof Json) && Json.isJson(obj.toString())) {
-            return new Json(obj.toString());
+        }
+
+        String value = obj.toString();
+        if (!(obj instanceof Json) && Json.isJson(value)) {
+            return new Json(value);
         } else if (!(obj instanceof Json)) {
             return null;
         }
@@ -204,169 +199,107 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     }
 
     /**
-     * Check if string is look like json
-     * @param rawJsonString string to check
-     * @return true if json
+     * parse current object to json
+     * @param rawJson json string to parse
+     * @return new Json
      */
-    public static boolean isJson(String rawJsonString) {
-        return rawJsonString.startsWith("{") && rawJsonString.endsWith("}");
+    private Json parseFromString(String rawJson) {
+        if (!isJson(rawJson)) {
+            throw new RuntimeException("Not json object. " + rawJson);
+        }
+        super.clear();
+
+        boolean quoted = false;
+        StringBuilder block = new StringBuilder();
+        String[] pair = new String[2];
+        int level = 0;
+        for (int i = 1; i < rawJson.length(); i++) {
+            char currentChar = rawJson.charAt(i);
+            char prevChar = rawJson.charAt(i - 1);
+            level += (!quoted && (currentChar == '{' || currentChar == '[')) ? 1 :
+                    (!quoted && (currentChar == '}' || currentChar == ']')) ? -1 : 0;
+
+            if (level == 0 || i + 1 == rawJson.length()) {
+                if (!quoted && currentChar == ',' || i  == rawJson.length() - 1) {
+                    if (pair[0] == null) {
+                        throw new RuntimeException("Expected value, but It's not at " + i);
+                    }
+                    pair[1] = block.toString();
+
+                    if (Json.isJson(pair[1]) && prevChar != '\"') {
+                        super.put(pair[0], new Json(pair[1], this.parseTypes));
+                    } else if (JsonList.isList(pair[1]) && prevChar != '\"') {
+                        super.put(pair[0], new JsonList(pair[1], this.parseTypes));
+                    } else {
+                        if (this.parseTypes && prevChar != '\"') {
+                            super.put(pair[0], JsonConverter.autoParseToType(pair[1]));
+                        } else {
+                            super.put(pair[0], pair[1]);
+                        }
+                    }
+                    pair = new String[2];
+                    block.setLength(0);
+                    continue;
+                } else if (!quoted && currentChar == ':') {
+                    pair[0] = block.toString().trim();
+                    block.setLength(0);
+                    continue;
+                } else if (currentChar == '\"' && prevChar != '\\') {
+                    quoted = !quoted;
+                    continue;
+                }
+            }
+            block.append(currentChar);
+        }
+
+        return this;
     }
 
     /**
-     * enable/disable type parsing
-     * @param parseTypes false if you don't want to parse types
+     * set parse types parameter
+     * @param parseTypes if false integers become a string etc
+     * @return this
      */
-    public void parseTypes(boolean parseTypes) {
+    public Json parseTypes(boolean parseTypes) {
         this.parseTypes = parseTypes;
+        return this;
+    }
+
+    /**
+     * change current json values
+     * @param rawJson new json string
+     * @return parsed json
+     */
+    public Json setJsonString(String rawJson) {
+        return this.parseFromString(rawJson);
+    }
+
+    /**
+     * @param rawJson json string
+     * @return true if string can be parsed to json
+     */
+    public static boolean isJson(String rawJson) {
+        return rawJson != null && rawJson.startsWith("{") && rawJson.endsWith("}");
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("{");
-        Iterator<Map.Entry<String, Object>> iterator = entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, Object> entry = iterator.next();
+        StringBuilder json = new StringBuilder("{");
+        Iterator<Map.Entry<String, Object>> entryIterator = super.entrySet().iterator();
+        while (entryIterator.hasNext()) {
+            Map.Entry<String, Object> entry = entryIterator.next();
             String key = entry.getKey();
-            Object obj = entry.getValue();
-            if ((!(obj instanceof String) && this.parseTypes) || obj instanceof JsonObject) {
-                builder.append("\"").append(key).append("\":").append(obj);
+            Object value = entry.getValue();
+            if ((!(value instanceof String) && this.parseTypes) || value instanceof JsonObject) {
+                json.append("\"").append(key).append("\":").append(value);
             } else {
-                builder.append("\"").append(key).append("\":\"").append(obj).append("\"");
+                json.append("\"").append(key).append("\":\"").append(value).append("\"");
             }
-            if (iterator.hasNext()) {
-                builder.append(", ");
-            }
-        }
-        return builder.append("}").toString();
-    }
-
-    /**
-     * parses values to their type
-     * @param object object to parse
-     * @return parsed object
-     */
-    static Object parseToType(Object object) {
-        if (object == null) {
-            return null;
-        }
-        String value = object.toString();
-        if (value.equalsIgnoreCase("true")) {
-            object = true;
-        } else if (value.equalsIgnoreCase("false")) {
-            object = false;
-        } else if (value.matches("[+-]?[0-9]+")) {
-            try {
-                object = JsonConverter.castTo(value, Integer.class);
-            } catch (NumberFormatException ex) {
-                object = JsonConverter.castTo(value, Long.class);
-            }
-        } else if (value.matches("[+-]?[0-9]*\\.[0-9]+")) {
-            object = JsonConverter.castTo(value, Double.class);
-        } else if (value.equals("null")) {
-            object = null;
-        }
-        return object;
-    }
-
-    /**
-     * parse Json from string
-     * @param rawJsonString string to parse
-     * @return Json object
-     */
-    public static Json parseFromString(String rawJsonString) {
-        return new Json(rawJsonString);
-    }
-
-    /**
-     * parse Json from string
-     * @param rawJsonString string to parse
-     * @param parseTypes if you need to parse types
-     * @return Json object
-     */
-    public static Json parseFromString(String rawJsonString, boolean parseTypes) {
-        return new Json(rawJsonString, parseTypes);
-    }
-
-    /**
-     * Parse current json from string
-     * @param rawJsonString string to parse
-     */
-    private void parser(String rawJsonString) {
-        if (rawJsonString.isEmpty()) {
-            return;
-        }
-
-        int level = 0;
-        int quoteLevel = 0;
-        int stringLength = rawJsonString.length();
-        StringBuilder block = new StringBuilder();
-        for (int i = 0; i < stringLength; i++) {
-            char currentChar = rawJsonString.charAt(i);
-            char prevChar = i == 0 ? '\0' : rawJsonString.charAt(i - 1);
-
-            if (currentChar == '\"' && prevChar != '\\') {
-                String key = null;
-                String value = null;
-                boolean isQuoted = true;
-                i += 1;
-                quoteLevel += 1;
-                for ( ; i <= stringLength; i++) {
-                    currentChar = i == stringLength ? '\0' : rawJsonString.charAt(i);
-                    prevChar = rawJsonString.charAt(i - 1);
-                    level += !isQuoted && (currentChar == '{' || currentChar == '[') ? 1 :
-                            !isQuoted && (currentChar == '}' || currentChar == ']') ? -1 : 0;
-                    if (!isQuoted && quoteLevel != 0 && currentChar == ',' || quoteLevel != 0 && i == stringLength) {
-                        throw new RuntimeException("Expected value, but it is not, at: " + i);
-                    }
-//                    repair it later
-//                    else if (!isQuoted && currentChar == ',' && level == 0) {
-//                        System.out.println(level);
-//                        throw new RuntimeException("Invalid structure at: " + i);
-//                    }
-                    else if (level == 0 && currentChar == '\"' && prevChar != '\\') {
-                        isQuoted = !isQuoted;
-                        quoteLevel += isQuoted ? 1 : -1;
-                        continue;
-                    } else if (!isQuoted && currentChar == ',' && level == 0 || i == stringLength) {
-                        value = block.toString().trim();
-                        block.setLength(0);
-                        break;
-                    } else if (!isQuoted && currentChar == ':' && level == 0) {
-                        key = block.toString().trim();
-                        block.setLength(0);
-                        continue;
-                    }
-                    block.append(currentChar);
-                }
-                if (key == null || value == null) {
-                    throw new RuntimeException("Invalid key-value structure, at: " + i);
-                }
-                if (isJson(value) && prevChar != '\"') {
-                    super.put(key, new Json(value, this.parseTypes));
-                } else if (JsonList.isList(value) && prevChar != '\"') {
-                    super.put(key, new JsonList(value, this.parseTypes));
-                } else {
-                    if (this.parseTypes && prevChar != '\"') {
-                        super.put(key, parseToType(value));
-                    } else {
-                        super.put(key, value);
-                    }
-                }
+            if (entryIterator.hasNext()) {
+                json.append(", ");
             }
         }
-    }
-
-    /**
-     * Validate string
-     * @param rawJsonString string to check
-     * @return string without brackets if success
-     * @throws IllegalArgumentException if fail
-     */
-    private String validateString(String rawJsonString) {
-        if (isJson(rawJsonString)) {
-            return rawJsonString.substring(1, rawJsonString.length() - 1);
-        }
-        throw new IllegalArgumentException("The String doesn't look like json.");
+        return json.append("}").toString();
     }
 
 }

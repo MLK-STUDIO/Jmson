@@ -2,47 +2,30 @@ package net.mlk.jmson;
 
 import net.mlk.jmson.utils.JsonConverter;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
+/**
+ * JsonList class
+ */
 public class JsonList extends ArrayList<Object> implements JsonObject {
     private boolean parseTypes = true;
 
-    /**
-     * Default list object
-     */
     public JsonList() {
-
     }
 
-    /**
-     * Default list object with parseTypes
-     * @param parseTypes if you want to parseTypes
-     */
-    public JsonList(boolean parseTypes) {
+    public JsonList(String rawList) {
+        this(rawList, true);
+    }
+
+    public JsonList(String rawList, boolean parseTypes) {
         this.parseTypes = parseTypes;
+        this.parseFromString(rawList);
     }
 
     /**
-     * List object parsed from string
-     * type parsing is true by default
-     * @param rawListString string to parse
-     */
-    public JsonList(String rawListString) {
-        this.parser(this.validateString(Objects.requireNonNull(rawListString)));
-    }
-
-    /**
-     * List object parsed from string where you can specify if you don't want parse types
-     * @param rawListString string to parse
-     * @param parseTypes type parsing in json: with true - 1. With false - "1"
-     */
-    public JsonList(String rawListString, boolean parseTypes) {
-        this(rawListString);
-        this.parseTypes = parseTypes;
-    }
-
-    /**
-     * @return copied json
+     * @return copied list
      */
     public JsonList copy() {
         JsonList json = new JsonList();
@@ -52,10 +35,10 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     }
 
     /**
-     *
-     * Custom method for add values
+     * custom method to add values and
+     * get instance of current object
      * @param value value to put
-     * @return current List
+     * @return this
      */
     public JsonList append(Object value) {
         super.add(value);
@@ -72,19 +55,17 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
 
     /**
      * @param index index of the value
-     * @return char
+     * @return first char in string
      */
     public char getCharacter(int index) {
         String value = this.getString(index);
-        if (value.length() != 1) {
-            return '\0';
-        }
-        return value.charAt(0);
+        return value == null ? '\0' : value.charAt(0);
     }
 
     /**
      * @param index index of the value
      * @return byte
+     * @throws IllegalStateException if not exists
      */
     public byte getByte(int index) {
         return (byte) this.getShort(index);
@@ -93,6 +74,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     /**
      * @param index index of the value
      * @return short
+     * @throws IllegalStateException if not exists
      */
     public short getShort(int index) {
         return (short) this.getInteger(index);
@@ -101,6 +83,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     /**
      * @param index index of the value
      * @return int
+     * @throws IllegalStateException if not exists
      */
     public int getInteger(int index) {
         return (int) this.getLong(index);
@@ -109,11 +92,12 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     /**
      * @param index index of the value
      * @return long
+     * @throws IllegalStateException if not exists
      */
     public long getLong(int index) {
         String value = this.getString(index);
         if (value == null) {
-            return 0;
+            throw new IllegalStateException("Element at " + index + " doesn't exists in json.");
         }
         return Long.parseLong(value);
     }
@@ -121,6 +105,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     /**
      * @param index index of the value
      * @return float
+     * @throws IllegalStateException if not exists
      */
     public float getFloat(int index) {
         return (float) this.getDouble(index);
@@ -129,14 +114,16 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     /**
      * @param index index of the value
      * @return double
+     * @throws IllegalStateException if not exists
      */
     public double getDouble(int index) {
         String value = this.getString(index);
         if (value == null) {
-            return 0;
+            throw new IllegalStateException("Element at " + index + " doesn't exists in json.");
         }
         return Double.parseDouble(value);
     }
+
 
     /**
      * @param index index of the value
@@ -154,8 +141,10 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         Object obj = this.get(index);
         if (obj == null) {
             return null;
-        } else if (!(obj instanceof JsonList) && JsonList.isList(obj.toString())) {
-            return new JsonList(obj.toString());
+        }
+        String value = obj.toString();
+        if (!(obj instanceof JsonList) && JsonList.isList(value)) {
+            return new JsonList(value);
         } else if (!(obj instanceof JsonList)) {
             return null;
         }
@@ -170,8 +159,11 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         Object obj = this.get(index);
         if (obj == null) {
             return null;
-        } else if (!(obj instanceof Json) && Json.isJson(obj.toString())) {
-            return new Json(obj.toString());
+        }
+
+        String value = obj.toString();
+        if (!(obj instanceof Json) && Json.isJson(value)) {
+            return new Json(value);
         } else if (!(obj instanceof Json)) {
             return null;
         }
@@ -193,7 +185,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     }
 
     /**
-     * @return list with jsons
+     * @return current list with jsons
      */
     public List<Json> getListWithJsons() {
         List<Json> result = new ArrayList<>();
@@ -220,6 +212,19 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     }
 
     /**
+     * @return current list with lists
+     */
+    public List<JsonList> getListWithLists() {
+        List<JsonList> result = new ArrayList<>();
+        for (Object obj : this) {
+            if (obj instanceof JsonList) {
+                result.add((JsonList) obj);
+            }
+        }
+        return result;
+    }
+
+    /**
      * @param object class to cast
      * @return T list
      * @param <T> param to cast
@@ -236,117 +241,99 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
     }
 
     /**
-     * Check if string is look like list
-     * @param rawListString string to check
-     * @return true if list
+     * parse current object to list
+     * @param rawList list string to parse
+     * @return new JsonList
      */
-    public static boolean isList(String rawListString) {
-        return rawListString.startsWith("[") && rawListString.endsWith("]");
+    private JsonList parseFromString(String rawList) {
+        if (!isList(rawList)) {
+            throw new RuntimeException("Not list object. " + rawList);
+        }
+        if (rawList.length() - 2 <= 0) {
+            return this;
+        }
+
+        int level = 0;
+        boolean quoted = false;
+        StringBuilder block = new StringBuilder();
+        for (int i = 1; i < rawList.length(); i++) {
+            char currentChar = rawList.charAt(i);
+            char prevChar = rawList.charAt(i - 1);
+            level += (!quoted && (currentChar == '{' || currentChar == '[')) ? 1 :
+                    (!quoted && (currentChar == '}' || currentChar == ']')) ? -1 : 0;
+
+            if (level == 0 || i == rawList.length() - 1) {
+                if (currentChar == '\"' && prevChar != '\"') {
+                    quoted = !quoted;
+                    continue;
+                } else if (!quoted && currentChar == ',' || i == rawList.length() - 1) {
+                    String value = block.toString().trim();
+                    if (Json.isJson(value) && prevChar != '\"') {
+                        super.add(new Json(value, this.parseTypes));
+                    } else if (JsonList.isList(value) && prevChar != '\"') {
+                        super.add(new JsonList(value, this.parseTypes));
+                    } else {
+                        if (this.parseTypes && prevChar != '\"') {
+                            super.add(JsonConverter.autoParseToType(value));
+                        } else {
+                            super.add(value);
+                        }
+                    }
+                    block.setLength(0);
+                    continue;
+                }
+            }
+            block.append(currentChar);
+        }
+
+        return this;
     }
 
     /**
-     * enable/disable type parsing
-     * @param parseTypes false if you don't want to parse types
+     * set parse types parameter
+     * @param parseTypes if false integers become a string etc
+     * @return this
      */
-    public void parseTypes(boolean parseTypes) {
+    public JsonList parseTypes(boolean parseTypes) {
         this.parseTypes = parseTypes;
+        return this;
+    }
+
+    /**
+     * change current list values
+     * @param rawList new list string
+     * @return parsed list
+     */
+    public JsonList setJsonString(String rawList) {
+        return this.parseFromString(rawList);
+    }
+
+    /**
+     * @param rawList list string
+     * @return true if string can be parsed to list
+     */
+    public static boolean isList(String rawList) {
+        return rawList != null && rawList.startsWith("[") && rawList.endsWith("]");
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("[");
+        StringBuilder list = new StringBuilder("[");
+
         Iterator<Object> iterator = super.iterator();
         while (iterator.hasNext()) {
-            Object obj = iterator.next();
-            if ((!(obj instanceof String) && this.parseTypes) || obj instanceof JsonObject) {
-                builder.append(obj);
+            Object value = iterator.next();
+            if ((!(value instanceof String) && this.parseTypes) || value instanceof JsonObject) {
+                list.append(value);
             } else {
-                builder.append("\"").append(obj).append("\"");
+                list.append("\"").append(value).append("\"");
             }
             if (iterator.hasNext()) {
-                builder.append(", ");
+                list.append(", ");
             }
         }
-        return builder.append("]").toString();
-    }
 
-    /**
-     * parse List from string
-     * @param rawListString string to parse
-     * @return Json object
-     */
-    public static JsonList parseFromString(String rawListString) {
-        return new JsonList(rawListString);
-    }
-
-    /**
-     * parse List from string
-     * @param rawListString string to parse
-     * @param parseTypes if you need to parse types
-     * @return Json object
-     */
-    public static JsonList parseFromString(String rawListString, boolean parseTypes) {
-        return new JsonList(rawListString, parseTypes);
-    }
-
-    /**
-     * Parse current list from string
-     * @param rawListString string to parse
-     */
-    private void parser(String rawListString) {
-        if (rawListString.isEmpty()) {
-            return;
-        }
-
-        int level = 0;
-        int stringLength = rawListString.length();
-        StringBuilder block = new StringBuilder();
-        for (int i = 0; i <= stringLength; i++) {
-            char currentChar = i == stringLength ? '\0' : rawListString.charAt(i);
-
-            level += currentChar == '{' || currentChar == '[' ? 1 :
-                    currentChar == '}' || currentChar == ']' ? -1 : 0;
-
-            if ((level == 0 && currentChar == ',') || i == stringLength) {
-                String value = block.toString().trim();
-                if (Json.isJson(value)) {
-                    super.add(new Json(value, this.parseTypes));
-                } else if (isList(value)) {
-                    super.add(new JsonList(value, this.parseTypes));
-                } else {
-                    boolean quoted = false;
-                    if (value.startsWith("\"") && value.endsWith("\"")) {
-                        value = value.substring(1, value.length() - 1);
-                        quoted = true;
-                    } else if (value.startsWith("\"") && !value.endsWith("\"") || level < 0) {
-                        throw new RuntimeException("Invalid value at: " + i);
-                    } else if (level != 0) {
-                        throw new RuntimeException("Invalid structure at: " + i);
-                    }
-                    if (this.parseTypes && !quoted) {
-                        super.add(Json.parseToType(value));
-                    } else {
-                        super.add(value);
-                    }
-                }
-                block.setLength(0);
-                continue;
-            }
-            block.append(currentChar);
-        }
-    }
-
-    /**
-     * Validate string
-     * @param rawListString string to check
-     * @return string without brackets if success
-     * @throws IllegalArgumentException if fail
-     */
-    private String validateString(String rawListString) {
-        if (isList(rawListString)) {
-            return rawListString.substring(1, rawListString.length() - 1);
-        }
-        throw new IllegalArgumentException("The String doesn't look like list.");
+        return list.append("]").toString();
     }
 
 }

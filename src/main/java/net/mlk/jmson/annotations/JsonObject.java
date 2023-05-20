@@ -7,9 +7,11 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
+
 public @interface JsonObject {
-    String key() default "";
-    String[] keyList() default "";
+    String[] keys() default {};
+    String dateFormat() default "";
+    boolean autoConvert() default true;
+    String methodName() default "";
     boolean ignoreNull() default false;
-    boolean checkExist() default true;
 }

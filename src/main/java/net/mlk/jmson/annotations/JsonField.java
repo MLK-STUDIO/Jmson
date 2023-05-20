@@ -7,10 +7,11 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
+
 public @interface JsonField {
-    String key() default "";
+    String key() default "JmsonKeyTemplate";
     String dateFormat() default "";
-    boolean ignoreNull() default false;
     Class<?> type() default JsonField.class;
-    Class<?>[] types() default JsonField.class;
+    Class<?>[] types() default {};
+    boolean ignoreNull() default false;
 }
