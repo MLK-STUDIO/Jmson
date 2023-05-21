@@ -207,6 +207,9 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
         if (!isJson(rawJson)) {
             throw new RuntimeException("Not json object. " + rawJson);
         }
+        if (rawJson.length() - 2 <= 0) {
+            return this;
+        }
         super.clear();
 
         boolean quoted = false;

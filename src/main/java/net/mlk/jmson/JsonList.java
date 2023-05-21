@@ -252,6 +252,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         if (rawList.length() - 2 <= 0) {
             return this;
         }
+        super.clear();
 
         int level = 0;
         boolean quoted = false;

@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 public class JsonConverter {
 
@@ -72,6 +73,7 @@ public class JsonConverter {
             boolean needAutoConvert = true;
 
             if (json.containsKey(fieldName)) {
+                field.setAccessible(true);
                 JsonField jsonField = field.getAnnotation(JsonField.class);
                 Object value = json.get(fieldName);
 
@@ -164,7 +166,17 @@ public class JsonConverter {
 
     private static <T extends JsonConvertible> Json convertToJson(Object instance, Class<T> clazz) {
         Json json = new Json();
+        Json parentJson = new Json();
+        Class<?> superClass = clazz.getSuperclass();
+        if (superClass != Object.class) {
+            parentJson.putAll(convertToJson(instance, superClass.asSubclass(JsonConvertible.class)));
+        }
         JsonObject jsonObject = clazz.getAnnotation(JsonObject.class);
+        String key = null;
+
+        if (jsonObject != null && !jsonObject.key().equals("JmsonKeyTemplate")) {
+            key = jsonObject.key();
+        }
 
         for (Field field : clazz.getDeclaredFields()) {
             try {
@@ -200,7 +212,7 @@ public class JsonConverter {
                         }
 
                         if (value instanceof JsonList || isConvertible(fieldType)) {
-                            JsonList values = (JsonList) value;
+                            List<Object> values = (List<Object>) value;
                             JsonList objects = new JsonList();
                             for (Object o : values) {
                                 if (!isConvertible(o.getClass())) {
@@ -221,7 +233,16 @@ public class JsonConverter {
                 throw new RuntimeException(e);
             }
         }
-        return json;
+
+        if (key == null) {
+            parentJson.putAll(json);
+            return parentJson;
+        } else {
+            Json newJson = new Json();
+            newJson.putAll(parentJson);
+            newJson.append(key, json);
+            return newJson;
+        }
     }
 
     /**
