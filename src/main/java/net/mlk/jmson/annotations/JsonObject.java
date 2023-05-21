@@ -9,6 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 
 public @interface JsonObject {
+    String key() default "JmsonKeyTemplate";
     String[] keys() default {};
     String dateFormat() default "";
     boolean autoConvert() default true;
