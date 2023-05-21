@@ -230,9 +230,9 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                     pair[1] = block.toString();
 
                     if (Json.isJson(pair[1]) && prevChar != '\"') {
-                        super.put(pair[0], new Json(pair[1], this.parseTypes));
+                        super.put(pair[0], new Json(pair[1].trim(), this.parseTypes));
                     } else if (JsonList.isList(pair[1]) && prevChar != '\"') {
-                        super.put(pair[0], new JsonList(pair[1], this.parseTypes));
+                        super.put(pair[0], new JsonList(pair[1].trim(), this.parseTypes));
                     } else {
                         if (this.parseTypes && prevChar != '\"') {
                             super.put(pair[0], JsonConverter.autoParseToType(pair[1]));
@@ -282,7 +282,7 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
      * @return true if string can be parsed to json
      */
     public static boolean isJson(String rawJson) {
-        return rawJson != null && rawJson.startsWith("{") && rawJson.endsWith("}");
+        return rawJson != null && rawJson.trim().startsWith("{") && rawJson.endsWith("}");
     }
 
     @Override

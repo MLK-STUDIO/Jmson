@@ -314,7 +314,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
      * @return true if string can be parsed to list
      */
     public static boolean isList(String rawList) {
-        return rawList != null && rawList.startsWith("[") && rawList.endsWith("]");
+        return rawList != null && rawList.trim().startsWith("[") && rawList.endsWith("]");
     }
 
     @Override
