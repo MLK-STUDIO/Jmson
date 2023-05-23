@@ -267,8 +267,21 @@ public class JsonConverter {
      * @return new json with object values by keys
      */
     private static Json getObjectValues(Json json, JsonObject jsonObject) {
+        Json newJson = json;
+        if (!jsonObject.key().equals("JmsonKeyTemplate")) {
+            newJson = new Json();
+            if (json.containsKey(jsonObject.key())) {
+                Object subJson = json.get(jsonObject.key());
+                if (subJson instanceof Json) {
+                    newJson.putAll((Json) subJson);
+                }
+            }
+        }
+
         if (jsonObject.keys().length != 0) {
-            Json newJson = new Json();
+            if (newJson == json) {
+                newJson = new Json();
+            }
             for (String key : jsonObject.keys()) {
                 if (json.containsKey(key)) {
                     Object subJson = json.get(key);
