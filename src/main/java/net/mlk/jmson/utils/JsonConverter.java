@@ -144,7 +144,7 @@ public class JsonConverter {
                         try {
                             value = castTo(value, fieldType);
                         } catch (NumberFormatException e) {
-                            throw new RuntimeException("[Jmson AutoConvert] can't cast " + value + " to " + fieldType);
+                            throw new RuntimeException("[Jmson AutoConvert] can't cast " + value + " to " + fieldType + " in " + field);
                         }
                     }
                     field.set(instance, value);
