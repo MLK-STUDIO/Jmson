@@ -73,75 +73,73 @@ public class JsonConverter {
             boolean needAutoConvert = true;
 
             if (json.containsKey(fieldName)) {
-                field.setAccessible(true);
-                JsonField jsonField = field.getAnnotation(JsonField.class);
-                Object value = json.get(fieldName);
+                try {
+                    field.setAccessible(true);
+                    JsonField jsonField = field.getAnnotation(JsonField.class);
+                    Object value = json.get(fieldName);
 
-                if (value != null) {
-                    if (isConvertible(fieldType)) {
-                        value = convertToObject(json.getJson(fieldName), fieldType.asSubclass(JsonConvertible.class));
-                    }
-                    else if (fieldType == LocalDateTime.class) {
-                        if (jsonField == null || jsonField.dateFormat().isEmpty()) {
-                            value = globalDateFormat != null ? getLocalDateTime(value.toString(), globalDateFormat) : null;
-                        } else {
-                            value = getLocalDateTime(value.toString(), jsonField.dateFormat());
-                        }
-                    }
-                    else if (value instanceof JsonList && (fieldType.isArray() || Collection.class.isAssignableFrom(fieldType))) {
-                        Class<?> defaultType = fieldType;
-                        boolean allowArray = true;
-                        if (jsonField != null) {
-                            if (jsonField.type() != JsonField.class) {
-                                defaultType = jsonField.type();
+                    if (value != null) {
+                        if (isConvertible(fieldType)) {
+                            value = convertToObject(json.getJson(fieldName), fieldType.asSubclass(JsonConvertible.class));
+                        } else if (fieldType == LocalDateTime.class) {
+                            if (jsonField == null || jsonField.dateFormat().isEmpty()) {
+                                value = globalDateFormat != null ? getLocalDateTime(value.toString(), globalDateFormat) : null;
+                            } else {
+                                value = getLocalDateTime(value.toString(), jsonField.dateFormat());
                             }
-                            for (Class<?> cl : jsonField.types()) {
-                                if (!isConvertible(cl)) {
-                                    continue;
+                        } else if (value instanceof JsonList && (fieldType.isArray() || Collection.class.isAssignableFrom(fieldType))) {
+                            Class<?> defaultType = fieldType;
+                            boolean allowArray = true;
+                            if (jsonField != null) {
+                                if (jsonField.type() != JsonField.class) {
+                                    defaultType = jsonField.type();
                                 }
-                                for (int i = 0; i < ((JsonList) value).size(); i++) {
-                                    JsonObject jo = cl.getAnnotation(JsonObject.class);
-                                    if (jo != null && !jo.methodName().isEmpty()) {
-                                        try {
-                                            Json obj = ((JsonList) value).getJson(i);
-                                            if (obj == null) {
-                                                continue;
+                                for (Class<?> cl : jsonField.types()) {
+                                    if (!isConvertible(cl)) {
+                                        continue;
+                                    }
+                                    for (int i = 0; i < ((JsonList) value).size(); i++) {
+                                        JsonObject jo = cl.getAnnotation(JsonObject.class);
+                                        if (jo != null && !jo.methodName().isEmpty()) {
+                                            try {
+                                                Json obj = ((JsonList) value).getJson(i);
+                                                if (obj == null) {
+                                                    continue;
+                                                }
+                                                Method method = cl.getDeclaredMethod(jo.methodName(), Json.class);
+                                                method.setAccessible(true);
+                                                if ((boolean) method.invoke(cl.newInstance(), obj)) {
+                                                    ((JsonList) value).set(i, convertToObject(obj, cl.asSubclass(JsonConvertible.class)));
+                                                }
+                                            } catch (NoSuchMethodException | IllegalAccessException |
+                                                     InvocationTargetException | InstantiationException e) {
+                                                throw new RuntimeException(e);
                                             }
-                                            Method method = cl.getDeclaredMethod(jo.methodName(), Json.class);
-                                            method.setAccessible(true);
-                                            if ((boolean) method.invoke(cl.newInstance(), obj)) {
-                                                ((JsonList) value).set(i, convertToObject(obj, cl.asSubclass(JsonConvertible.class)));
-                                            }
-                                        } catch (NoSuchMethodException | IllegalAccessException |
-                                                 InvocationTargetException | InstantiationException e) {
-                                            throw new RuntimeException(e);
                                         }
                                     }
                                 }
+                                allowArray = jsonField.types().length == 0;
                             }
-                            allowArray = jsonField.types().length == 0;
-                        }
 
-                        if (fieldType.isArray()) {
-                            if (allowArray) {
-                                value = castToArray((JsonList) value, fieldType);
-                            } else {
-                                throw new RuntimeException("Can't set multi types to array fields");
-                            }
-                        } else if (fieldType == JsonList.class) {
-                            value = castToCollection((JsonList) value, defaultType);
-                        } else {
-                            if (defaultType == fieldType) {
-                                value = castToCollection((JsonList) value, (ParameterizedType) field.getGenericType());
-                            } else {
+                            if (fieldType.isArray()) {
+                                if (allowArray) {
+                                    value = castToArray((JsonList) value, fieldType);
+                                } else {
+                                    throw new RuntimeException("Can't set multi types to array fields");
+                                }
+                            } else if (fieldType == JsonList.class) {
                                 value = castToCollection((JsonList) value, defaultType);
+                            } else {
+                                if (defaultType == fieldType) {
+                                    value = castToCollection((JsonList) value, (ParameterizedType) field.getGenericType());
+                                } else {
+                                    value = castToCollection((JsonList) value, defaultType);
+                                }
                             }
+                            needAutoConvert = false;
                         }
-                        needAutoConvert = false;
                     }
-                }
 
-                try {
                     if (value != null && value.getClass() != fieldType && autoConvert && needAutoConvert) {
                         try {
                             value = castTo(value, fieldType);
@@ -150,8 +148,7 @@ public class JsonConverter {
                         }
                     }
                     field.set(instance, value);
-                }
-                catch (IllegalAccessException e) {
+                } catch (IllegalAccessException e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -290,9 +287,8 @@ public class JsonConverter {
                     }
                 }
             }
-            return newJson;
         }
-        return json;
+        return newJson;
     }
 
     /**
