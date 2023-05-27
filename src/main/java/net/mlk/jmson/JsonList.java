@@ -284,7 +284,11 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
                     continue;
                 }
             }
-            block.append(currentChar);
+
+            // Test condition
+            if (currentChar == ' ' && level != 0 || quoted || currentChar != ' ') {
+                block.append(currentChar);
+            }
         }
 
         return this;

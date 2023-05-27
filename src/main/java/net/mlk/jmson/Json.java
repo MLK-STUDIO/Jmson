@@ -1,6 +1,5 @@
 package net.mlk.jmson;
 
-import com.sun.xml.internal.ws.api.model.wsdl.WSDLOutput;
 import net.mlk.jmson.utils.JsonConverter;
 
 import java.util.*;
@@ -253,7 +252,8 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                     continue;
                 }
             }
-            if (quoted || currentChar != ' ') {
+
+            if (currentChar == ' ' && level != 0 || quoted || currentChar != ' ') {
                 block.append(currentChar);
             }
         }
