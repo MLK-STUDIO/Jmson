@@ -8,6 +8,7 @@ import net.mlk.jmson.annotations.JsonObject;
 import java.lang.reflect.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -78,10 +79,14 @@ public class JsonConverter {
                         if (isConvertible(fieldType)) {
                             value = convertToObject(json.getJson(fieldName), fieldType.asSubclass(JsonConvertible.class));
                         } else if (fieldType == LocalDateTime.class) {
-                            if (jsonField == null || jsonField.dateFormat().isEmpty()) {
-                                value = globalDateFormat != null ? getLocalDateTime(value.toString(), globalDateFormat) : null;
-                            } else {
-                                value = getLocalDateTime(value.toString(), jsonField.dateFormat());
+                            try {
+                                if (jsonField == null || jsonField.dateFormat().isEmpty()) {
+                                    value = globalDateFormat != null ? getLocalDateTime(value.toString(), globalDateFormat) : null;
+                                } else {
+                                    value = getLocalDateTime(value.toString(), jsonField.dateFormat());
+                                }
+                            } catch (DateTimeParseException ex) {
+                                throw new RuntimeException("Can't parse datetime \"" + value + "\" at " + field);
                             }
                         } else if (value instanceof JsonList && (fieldType.isArray() || Collection.class.isAssignableFrom(fieldType))) {
                             Class<?> defaultType = fieldType;
