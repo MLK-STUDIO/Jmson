@@ -22,11 +22,7 @@ public class JsonConverter {
      * @return new class instance
      */
     public static <T extends JsonConvertible> T convertToObject(Json json, Class<T> clazz) {
-        try {
-            return convertToObject(json, clazz.newInstance());
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
+        return convertToObject(json, getDefaultConstructor(clazz));
     }
 
     /**
@@ -108,11 +104,11 @@ public class JsonConverter {
                                                 }
                                                 Method method = cl.getDeclaredMethod(jo.methodName(), Json.class);
                                                 method.setAccessible(true);
-                                                if ((boolean) method.invoke(cl.newInstance(), obj)) {
+                                                if ((boolean) method.invoke(getDefaultConstructor(cl.asSubclass(JsonConvertible.class)), obj)) {
                                                     ((JsonList) value).set(i, convertToObject(obj, cl.asSubclass(JsonConvertible.class)));
                                                 }
                                             } catch (NoSuchMethodException | IllegalAccessException |
-                                                     InvocationTargetException | InstantiationException e) {
+                                                     InvocationTargetException e) {
                                                 throw new RuntimeException(e);
                                             }
                                         }
@@ -239,6 +235,19 @@ public class JsonConverter {
             newJson.putAll(parentJson);
             newJson.append(key, json);
             return newJson;
+        }
+    }
+
+    /**
+     * get private default constructor instance
+     * @param clazz class of the constructor
+     * @return instance os class
+     */
+    private static <T extends JsonConvertible> T getDefaultConstructor(Class<T> clazz) {
+        try {
+            return clazz.getDeclaredConstructor().newInstance();
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
         }
     }
 
