@@ -451,4 +451,22 @@ public class JsonConverter {
         }
         return object;
     }
+
+    public static String decodeUnicode(String unicodeStr) {
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        while (i < unicodeStr.length()) {
+            char c = unicodeStr.charAt(i);
+            if (c == '\\' && i + 5 < unicodeStr.length() && unicodeStr.charAt(i + 1) == 'u') {
+                char decodedChar = (char) Integer.parseInt(unicodeStr.substring(i + 2, i + 6), 16);
+                sb.append(decodedChar);
+                i += 6;
+            } else {
+                sb.append(c);
+                i++;
+            }
+        }
+        return sb.toString();
+    }
+
 }

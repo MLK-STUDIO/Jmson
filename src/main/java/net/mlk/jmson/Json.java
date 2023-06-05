@@ -227,7 +227,7 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
                     if (pair[0] == null) {
                         throw new RuntimeException("Expected value, but It's not at " + i);
                     }
-                    pair[1] = block.toString();
+                    pair[1] = JsonConverter.decodeUnicode(block.toString());
 
                     if (Json.isJson(pair[1]) && prevChar != '\"') {
                         super.put(pair[0], new Json(pair[1].trim(), this.parseTypes));
