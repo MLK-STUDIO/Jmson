@@ -268,7 +268,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
                     quoted = !quoted;
                     continue;
                 } else if (!quoted && currentChar == ',' || i == rawList.length() - 1) {
-                    String value = JsonConverter.decodeUnicode(block.toString());
+                    String value = block.toString();
                     if (Json.isJson(value) && prevChar != '\"') {
                         super.add(new Json(value, this.parseTypes));
                     } else if (JsonList.isList(value) && prevChar != '\"') {
