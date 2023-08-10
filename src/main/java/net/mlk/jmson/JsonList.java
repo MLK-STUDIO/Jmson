@@ -2,6 +2,7 @@ package net.mlk.jmson;
 
 import net.mlk.jmson.utils.JsonConverter;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -331,7 +332,9 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
             if ((!(value instanceof String) && this.parseTypes) || value instanceof JsonObject) {
                 list.append(value);
             } else {
-                list.append("\"").append(value).append("\"");
+                byte[] encodedBytes = value.toString().getBytes(StandardCharsets.UTF_8);
+                String encodedValue = new String(encodedBytes, StandardCharsets.UTF_8);
+                list.append("\"").append(encodedValue).append("\"");
             }
             if (iterator.hasNext()) {
                 list.append(", ");
