@@ -1,7 +1,6 @@
 package net.mlk.jmson;
 
 import net.mlk.jmson.utils.JsonConverter;
-
 import java.util.*;
 
 /**
