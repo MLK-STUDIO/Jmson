@@ -196,13 +196,15 @@ public class JsonConverter {
                     Class<?> valueType = value.getClass();
                     if (isConvertible(value.getClass())) {
                         value = convertToJson((JsonConvertible) value);
-                    } else if ((value.getClass().isArray() || Collection.class.isAssignableFrom(value.getClass()))) {
+                    }
+                    else if ((value.getClass().isArray() || Collection.class.isAssignableFrom(value.getClass()))) {
                         if (value.getClass().isArray()) {
                             JsonList list = new JsonList();
                             list.addAll(Arrays.asList((Object[]) value));
                             value = list;
                             fieldType = fieldType.getComponentType();
-                        } else {
+                        }
+                        else {
                             if (!(value instanceof JsonList)) {
                                 Type type = ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
                                 fieldType = (Class<?>) type;
@@ -221,6 +223,9 @@ public class JsonConverter {
                             }
                             value = objects;
                         }
+                    }
+                    else if (value instanceof LocalDateTime) {
+                        value = value.toString();
                     }
                 }
 
