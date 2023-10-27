@@ -46,7 +46,7 @@ public class JsonList extends ArrayList<Object> implements JsonObject {
         return this;
     }
 
-    public JsonList appendAll(List<Object> list) {
+    public <T> JsonList appendAll(List<T> list) {
         this.addAll(list);
         return this;
     }
