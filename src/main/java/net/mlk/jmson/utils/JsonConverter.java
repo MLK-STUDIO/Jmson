@@ -3,6 +3,7 @@ package net.mlk.jmson.utils;
 import net.mlk.jmson.Json;
 import net.mlk.jmson.JsonList;
 import net.mlk.jmson.annotations.JsonField;
+import net.mlk.jmson.annotations.JsonIgnore;
 import net.mlk.jmson.annotations.JsonObject;
 
 import java.lang.reflect.*;
@@ -180,6 +181,10 @@ public class JsonConverter {
         for (Field field : clazz.getDeclaredFields()) {
             try {
                 field.setAccessible(true);
+                JsonIgnore jsonIgnore = field.getAnnotation(JsonIgnore.class);
+                if (jsonIgnore != null) {
+                    continue;
+                }
                 String fieldName = getFieldName(field);
                 Class<?> fieldType = field.getType();
                 Object value = field.get(instance);
