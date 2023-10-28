@@ -6,6 +6,7 @@ import net.mlk.jmson.annotations.JsonField;
 import net.mlk.jmson.annotations.JsonObject;
 
 import java.lang.reflect.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -224,7 +225,7 @@ public class JsonConverter {
                             value = objects;
                         }
                     }
-                    else if (value instanceof LocalDateTime) {
+                    else if (value instanceof LocalDateTime || value instanceof LocalDate) {
                         value = value.toString();
                     }
                 }
