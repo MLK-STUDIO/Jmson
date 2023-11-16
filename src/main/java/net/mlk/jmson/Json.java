@@ -1,6 +1,10 @@
 package net.mlk.jmson;
 
 import net.mlk.jmson.utils.JsonConverter;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.Temporal;
 import java.util.*;
 
 /**
@@ -295,7 +299,7 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
             Map.Entry<String, Object> entry = entryIterator.next();
             String key = entry.getKey();
             Object value = entry.getValue();
-            if ((!(value instanceof String) && this.parseTypes) || value instanceof JsonObject) {
+            if ((!(value instanceof String || value instanceof Temporal) && this.parseTypes) || value instanceof JsonObject) {
                 json.append("\"").append(key).append("\":").append(value);
             } else {
                 json.append("\"").append(key).append("\":\"").append(value).append("\"");

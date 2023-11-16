@@ -235,7 +235,6 @@ public class JsonConverter {
                         value = value.toString();
                     }
                 }
-
                 if (value != null || !ignoreNull) {
                     json.append(fieldName, value);
                 }
