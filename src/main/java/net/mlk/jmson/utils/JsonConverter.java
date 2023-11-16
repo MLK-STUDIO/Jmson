@@ -7,6 +7,7 @@ import net.mlk.jmson.annotations.JsonIgnore;
 import net.mlk.jmson.annotations.JsonObject;
 
 import java.lang.reflect.*;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -230,7 +231,7 @@ public class JsonConverter {
                             value = objects;
                         }
                     }
-                    else if (value instanceof LocalDateTime || value instanceof LocalDate) {
+                    else if (value instanceof LocalDateTime || value instanceof LocalDate || value instanceof Instant) {
                         value = value.toString();
                     }
                 }
