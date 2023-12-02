@@ -2,6 +2,7 @@ package net.mlk.jmson;
 
 import net.mlk.jmson.utils.JsonConverter;
 
+import java.io.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.Temporal;
@@ -23,6 +24,25 @@ public class Json extends LinkedHashMap<String, Object> implements JsonObject {
     public Json(String rawJson, boolean parseTypes) {
         this.parseTypes = parseTypes;
         this.parseFromString(rawJson);
+    }
+
+    public Json(File file) {
+        this(file, true);
+    }
+
+    public Json(File file, boolean parseTypes) {
+        this.parseTypes = parseTypes;
+
+        try (FileInputStream inputStream = new FileInputStream(file)) {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            int b;
+            while ((b = inputStream.read()) != -1) {
+                byteArrayOutputStream.write(b);
+            }
+            this.parseFromString(byteArrayOutputStream.toString());
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     /**
