@@ -169,7 +169,7 @@ public class JsonConverter {
         Json json = new Json();
         Json parentJson = new Json();
         Class<?> superClass = clazz.getSuperclass();
-        if (superClass != Object.class) {
+        if (isConvertible(superClass)) {
             parentJson.putAll(convertToJson(instance, superClass.asSubclass(JsonConvertible.class)));
         }
         JsonObject jsonObject = clazz.getAnnotation(JsonObject.class);
