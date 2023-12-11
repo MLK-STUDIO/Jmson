@@ -6,12 +6,17 @@ import net.mlk.jmson.annotations.JsonField;
 import net.mlk.jmson.annotations.JsonIgnore;
 import net.mlk.jmson.annotations.JsonObject;
 
+import javax.swing.text.DateFormatter;
 import java.lang.reflect.*;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -51,10 +56,9 @@ public class JsonConverter {
      */
     private static <T extends JsonConvertible> T convertToObject(Json json, T instance, Class<?> clazz) {
         Class<?> superClass = clazz.getSuperclass();
-        if (superClass != Object.class) {
+        if (isConvertible(superClass)) {
             convertToObject(json, instance, superClass);
         }
-
         JsonObject jsonObject = clazz.getAnnotation(JsonObject.class);
         String globalDateFormat = null;
         boolean autoConvert = true;
@@ -89,6 +93,18 @@ public class JsonConverter {
                                     value = getLocalDateTime(value.toString(), jsonField.dateFormat());
                                 }
                             } catch (DateTimeParseException ex) {
+                                ex.printStackTrace();
+                                throw new RuntimeException("Can't parse datetime \"" + value + "\" at " + field);
+                            }
+                        } else if (fieldType == LocalDate.class) {
+                            try {
+                                if (jsonField == null || jsonField.dateFormat().isEmpty()) {
+                                    value = globalDateFormat != null ? getLocalDate(value.toString(), globalDateFormat) : null;
+                                } else {
+                                    value = getLocalDate(value.toString(), jsonField.dateFormat());
+                                }
+                            } catch (DateTimeParseException ex) {
+                                ex.printStackTrace();
                                 throw new RuntimeException("Can't parse datetime \"" + value + "\" at " + field);
                             }
                         } else if (value instanceof JsonList && (fieldType.isArray() || Collection.class.isAssignableFrom(fieldType))) {
@@ -191,12 +207,14 @@ public class JsonConverter {
                 Object value = field.get(instance);
                 boolean ignoreNull = jsonObject != null && jsonObject.ignoreNull();
                 JsonField fieldData = field.getAnnotation(JsonField.class);
+                String dateFormat = null;
                 if (fieldData != null) {
                     ignoreNull = fieldData.ignoreNull();
 
                     if (fieldData.type() == String.class && value == null) {
                         value = "null";
                     }
+                    dateFormat = fieldData.dateFormat();
                 }
 
                 if (value != null) {
@@ -232,7 +250,14 @@ public class JsonConverter {
                         }
                     }
                     else if (value instanceof LocalDateTime || value instanceof LocalDate || value instanceof Instant) {
-                        value = value.toString();
+                        if (dateFormat != null && !dateFormat.isEmpty()) {
+                            if (value instanceof LocalDateTime) {
+                                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
+                                value = formatter.format((TemporalAccessor) value);
+                            }
+                        } else {
+                            value = value.toString();
+                        }
                     }
                 }
                 if (value != null || !ignoreNull) {
@@ -325,6 +350,12 @@ public class JsonConverter {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
         return LocalDateTime.parse(date, formatter);
     }
+
+    private static LocalDate getLocalDate(String date, String format) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        return LocalDate.parse(date, formatter);
+    }
+
 
     /**
      * check if class can be converted to json
